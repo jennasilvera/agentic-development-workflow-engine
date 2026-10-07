@@ -156,3 +156,6 @@ durable worker recovery, isolated execution, typed model proposals and reconcile
 
 Run admission is under development. The [immutable run-input contract](docs/run-input.md)
 defines versioned task/repository/revision identity; it does not yet admit or execute runs.
+
+An internal submission service now persists those inputs with repository checks, request-key
+idempotency and atomic audit. Submissions remain unverified and cannot dispatch execution.

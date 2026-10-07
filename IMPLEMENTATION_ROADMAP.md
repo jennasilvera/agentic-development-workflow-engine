@@ -149,3 +149,12 @@ cover changed inputs, nested immutability, invalid/coerced/oversized fields, ful
 URL normalization, criterion order and a fixed digest vector. See docs/run-input.md.
 This is a prerequisite only: atomic admission, database persistence, repository membership
 verification and outbox scheduling remain unimplemented. Execution containment is unchanged.
+
+## Increment 1d: unverified submission persistence
+
+Added an append-only PostgreSQL submission table and internal transactional recording service.
+Repository enabled/URL checks serialize with disable; actor-scoped request keys provide safe
+retries and reject changed input. Digest constraints, foreign keys, immutable-row triggers and
+populated-downgrade protection preserve evidence. Audit writes share the caller's transaction.
+These are recorded requests, not admitted executions. Next: verified revision/policy admission,
+run lifecycle and transactional outbox; expose a run API only with those boundaries in place.
