@@ -20,6 +20,7 @@ are rebuilt. This is an active implementation, not a production-ready release.
 | Operator authentication | Bearer authentication on application APIs, health and metrics; missing configuration fails closed |
 | Repository registry | Canonical GitHub identities, duplicate-safe registration, bounded listing, enable/disable controls |
 | Metadata intake | Immutable task/revision inputs, idempotent submissions, pinned GitHub repository IDs and persisted public revision observations |
+| Model proposal contract | Internal provider-neutral gateway with strict input/content identity, bounded calls and validated text replacements; no live provider or execution wiring |
 | Durable handoff | Transactional outbox, fenced leases and deduplicated inbox delivery; no execution authority |
 | Patch review | Approval and rejection bound to the exact diff digest; operator identity and timestamp recorded |
 | Concurrency and audit | PostgreSQL uniqueness/row locks; decisions and audit events commit together |
@@ -172,9 +173,10 @@ observation remain distinct from execution admission. The status API always repo
 - [Revision observations](docs/revision-observation.md): bounded provider lookup and its limits.
 - [Deployment](docs/deployment.md): migration-first startup, container checks and release blockers.
 - [Recovery drill](docs/recovery.md): backup restoration, evidence checks and delivery replay.
+- [Model gateway](docs/model-gateway.md): internal proposal contract, reservations and integration limits.
 
 Remaining product work includes admitted-run lifecycle, isolated repository acquisition and
-execution, typed model proposals with budgets and evaluations, validated changesets, and
+execution, production model adapters with durable budgets and evaluations, validated changesets, and
 reconciled publication. Production release also requires deployment-specific recovery,
 monitoring, capacity and security qualification. These are open requirements, not capabilities
 provided by the current control plane.

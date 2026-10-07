@@ -218,3 +218,13 @@ Removed the Markdown-to-CI-YAML target mismatch and recruiter-oriented recommend
 Legacy analysis proposals now accept only fixed documentation paths, reject every invalid
 target before patch generation, deduplicate targets, and explicitly report validation not run.
 This fixes the unsafe artifact shape without claiming a task implementation/model gateway.
+
+## Increment 4a: internal typed model gateway
+
+Added immutable curated-context and full-file replacement schemas, domain-separated identity,
+strict JSON parsing, exact source-content binding, fixed provider/model policy and asynchronous
+per-instance reservations. Provider failure, deadline, cancellation and invalid response never
+refund uncertain reservations; there is no implicit retry/fallback or execution authority.
+Deterministic provider fixtures cover shape, identity, bounds and concurrency. The gateway is
+not wired to live provider transport, persistence or workers; durable billing budgets, adapters,
+verified acquisition, task evaluations and execution remain open. See docs/model-gateway.md.
