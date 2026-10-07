@@ -2,9 +2,7 @@ import tempfile
 from collections import Counter
 from pathlib import Path
 
-from git import Repo
-
-from adwe.core.config import settings
+from adwe.services.repository_clone import clone_repository
 from adwe.workflows.state import WorkflowState
 
 IGNORED_DIRS = {
@@ -36,17 +34,6 @@ LANGUAGE_BY_EXT = {
     ".sql": "SQL",
     ".sh": "Shell",
 }
-
-
-def _clone_url(repository_url: str) -> str:
-    if settings.github_token and repository_url.startswith("https://github.com/"):
-        return repository_url.replace(
-            "https://github.com/",
-            f"https://x-access-token:{settings.github_token}@github.com/",
-            1,
-        )
-
-    return repository_url
 
 
 def _is_ignored(path: Path) -> bool:
@@ -81,7 +68,7 @@ def analyze_repository(state: WorkflowState):
 
     with tempfile.TemporaryDirectory() as tmpdir:
         repo_path = Path(tmpdir) / "repo"
-        Repo.clone_from(_clone_url(repository_url), repo_path)
+        clone_repository(repository_url, repo_path)
 
         files = [
             path

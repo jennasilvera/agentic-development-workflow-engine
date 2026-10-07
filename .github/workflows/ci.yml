@@ -33,10 +33,13 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --frozen
+
+      - name: Apply database migrations
+        run: PYTHONPATH=src uv run --frozen alembic upgrade head
 
       - name: Run tests
-        run: PYTHONPATH=src uv run pytest
+        run: PYTHONPATH=src uv run --frozen pytest
 
       - name: Validate Docker Compose
         run: docker compose config

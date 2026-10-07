@@ -1,11 +1,13 @@
 from arq import create_pool
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from adwe.models.patch_summary_schema import PatchSummaryRead
+
+from adwe.api.execution_policy import require_live_operations
 from adwe.db.session import AsyncSessionLocal
 from adwe.models.patch import Patch
 from adwe.models.patch_schema import PatchRead
 from adwe.models.patch_status import PatchStatus
+from adwe.models.patch_summary_schema import PatchSummaryRead
 from adwe.services.audit import record_audit_event
 from adwe.workers.queue import get_redis_settings
 
@@ -38,7 +40,11 @@ async def get_workflow_patch(workflow_id: str, patch_id: str):
         return patch
 
 
-@router.post("/{workflow_id}/patches/{patch_id}/approve", response_model=PatchRead)
+@router.post(
+    "/{workflow_id}/patches/{patch_id}/approve",
+    response_model=PatchRead,
+    dependencies=[Depends(require_live_operations)],
+)
 async def approve_patch(workflow_id: str, patch_id: str):
     async with AsyncSessionLocal() as session:
         patch = await session.get(Patch, patch_id)
@@ -61,7 +67,11 @@ async def approve_patch(workflow_id: str, patch_id: str):
         return patch
 
 
-@router.post("/{workflow_id}/patches/{patch_id}/reject", response_model=PatchRead)
+@router.post(
+    "/{workflow_id}/patches/{patch_id}/reject",
+    response_model=PatchRead,
+    dependencies=[Depends(require_live_operations)],
+)
 async def reject_patch(workflow_id: str, patch_id: str):
     async with AsyncSessionLocal() as session:
         patch = await session.get(Patch, patch_id)
@@ -101,7 +111,11 @@ async def get_workflow_patches_summary(workflow_id: str):
         }
 
 
-@router.post("/{workflow_id}/patches/{patch_id}/apply", response_model=PatchRead)
+@router.post(
+    "/{workflow_id}/patches/{patch_id}/apply",
+    response_model=PatchRead,
+    dependencies=[Depends(require_live_operations)],
+)
 async def apply_approved_patch(
     workflow_id: str,
     patch_id: str,

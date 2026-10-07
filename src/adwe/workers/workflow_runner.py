@@ -1,5 +1,5 @@
-from datetime import datetime
 import logging
+from datetime import datetime
 
 from sqlalchemy import select
 
@@ -10,13 +10,15 @@ from adwe.models.patch_status import PatchStatus
 from adwe.models.workflow import Workflow
 from adwe.models.workflow_status import WorkflowStatus
 from adwe.services.audit import record_audit_event
-from adwe.workflows.engine import workflow_graph
+from adwe.services.execution_policy import Operation, require_operation
 from adwe.workers.heartbeat import record_heartbeat
+from adwe.workflows.engine import workflow_graph
 
 logger = logging.getLogger(__name__)
 
 
 async def run_workflow(ctx, workflow_id: str):
+    require_operation(Operation.LIVE_WORKFLOW)
     await record_heartbeat()
 
     async with AsyncSessionLocal() as session:

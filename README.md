@@ -2,319 +2,85 @@
 
 ![CI](https://github.com/jennasilvera/adwe/actions/workflows/ci.yml/badge.svg)
 
-Agentic Development Workflow Engine (ADWE) is a production-oriented platform engineering project that analyzes repositories, generates implementation plans, orchestrates agent workflows, records audit events, and lays the foundation for automated code modification and pull request creation.
+ADWE is being rebuilt as a controlled, durable platform for AI-assisted repository changes.
+The existing Python/FastAPI/PostgreSQL/ARQ/LangGraph implementation is a prototype.
+It is **not production ready**.
 
-## Architecture
+## Current operating mode
 
-```mermaid
-flowchart TD
+Live repository acquisition, workflow mutations, host test execution and GitHub publication
+are disabled by containment policy. Mutating API requests return `503` with
+`detail.code = "operation_unavailable"`. Existing queued workflow/patch jobs also reject
+before operational effects. There is no environment switch to bypass containment.
 
-    Client[Client / CLI / API Consumer]
+Available capabilities:
 
-    Client --> API[FastAPI API]
+- Offline rule-based planning and Markdown proposal generation from supplied inventory.
+- Diff preview at `POST /v1/patch-workflows/preview` without clone or execution.
+- OpenAPI documentation at `/docs` and `/openapi.json`.
+- Existing persisted workflow, patch, audit, timeline and aggregate read APIs when their
+  PostgreSQL/Redis dependencies are available.
+- Local Git fixture tests and development of the future trusted execution interfaces.
 
-    API --> Workflow[Workflow Service]
+Read APIs are not authenticated yet. Run only in a trusted development environment without
+production credentials or sensitive data. See [SECURITY.md](SECURITY.md) for the precise
+containment contract, residual risks and rollout procedure.
 
-    Workflow --> DB[(PostgreSQL)]
+## Engineering documents
 
-    Workflow --> Queue[ARQ Queue]
+- [Current-state assessment](CURRENT_STATE_ASSESSMENT.md): source evidence and verified baseline.
+- [Architecture](ARCHITECTURE.md): implemented versus target system and trust boundaries.
+- [Production-readiness gaps](PRODUCTION_READINESS_GAP_ANALYSIS.md): prioritized blockers.
+- [Implementation roadmap](IMPLEMENTATION_ROADMAP.md): independently verifiable phases.
 
-    Queue --> Worker[Worker]
+The target product authorizes typed model proposals, executes them in isolated workspaces,
+and records revision-bound validation and publication evidence. Durable execution,
+repository authorization, real task implementation, isolated tests and safe publication
+remain roadmap work, not capabilities established by this release.
 
-    Worker --> LangGraph[LangGraph Engine]
+## Local development
 
-    LangGraph --> Analysis[Repository Analysis]
-
-    LangGraph --> Planning[Implementation Planning]
-
-    LangGraph --> Patch[Code Modification]
-
-    Patch --> GitHub[GitHub Branch / PR]
-
-    Worker --> Audit[Audit Events]
-
-    Audit --> DB
-
-    GitHub --> PR[Pull Request Records]
-
-    PR --> DB
-```
-
-The system consists of:
-
-* FastAPI API layer
-* PostgreSQL persistence
-* Redis + ARQ background job queue
-* LangGraph workflow orchestration
-* Repository analysis engine
-* Implementation planning engine
-* Code modification engine
-* Pull request tracking
-* Audit logging
-
-Architecture source:
-
-```text
-docs/diagrams/adwe-architecture.mmd
-```
-
-## Features
-
-### Current Capabilities
-
-* FastAPI backend
-* PostgreSQL persistence
-* Redis service
-* Docker Compose local stack
-* Alembic database migrations
-* LangGraph workflow orchestration
-* Repository architecture analysis
-* Implementation planning
-* Code modification proposal generation
-* Patch workflow scaffolding
-* Test execution service
-* Pull request record tracking
-* Audit event persistence
-* Prometheus metrics endpoint
-* Request ID middleware
-* GitHub Actions CI
-* Workflow execution timestamps
-* Retry tracking
-* Queue metrics
-* Worker heartbeat monitoring
-
-
-### Agentic Workflow Capabilities
-
-ADWE now supports:
-
-- Repository analysis with framework/tooling detection
-- Structured implementation planning
-- Planner trace metadata
-- Dynamic patch target selection
-- Patch preview summaries
-- Patch metadata persistence
-- Human approval workflow
-- Test-gated patch application
-- Git branch creation
-- GitHub pull request creation
-- Pull request persistence
-- Workflow-to-PR linkage
-- Structured audit events
-
-
-
-### Planned Capabilities
-
-* Real GitHub branch creation
-* Patch application against repositories
-* Git push automation
-* Pull request creation
-* OpenTelemetry tracing
-* LLM-powered planning
-* Role-based access control
-* Kubernetes deployment
-* Multi-agent execution
-
-## Local Development
-
-### Start Infrastructure
+Python 3.12+ and uv are required. Git is needed by local fixture tests.
 
 ```bash
-docker compose up --build
+uv sync --frozen
+PYTHONPATH=src uv run --frozen pytest -q
 ```
 
-### Health Check
+The existing timeline test requires PostgreSQL and migrated tables even though it resides
+under `tests/unit`. A missing database causes a real test failure; do not interpret the suite
+as entirely infrastructure-free. CI provisions PostgreSQL and applies migrations before tests.
+
+For development infrastructure only:
 
 ```bash
-curl http://localhost:8000/v1/health
+docker compose up -d postgres redis
 ```
 
-### Open API Documentation
-
-```text
-http://localhost:8000/docs
-```
-
-### Metrics
+Compose exposes PostgreSQL on host port **5433**, while the existing Alembic config defaults
+to port **5432**. To use the Compose database, set `sqlalchemy.url` in a local `alembic.ini`
+to `postgresql+psycopg://adwe:adwe@127.0.0.1:5433/adwe`, then run:
 
 ```bash
-curl http://localhost:8000/metrics
+PYTHONPATH=src uv run --frozen alembic upgrade head
+DATABASE_URL=postgresql+asyncpg://adwe:adwe@127.0.0.1:5433/adwe \
+  PYTHONPATH=src uv run --frozen uvicorn adwe.api.app:app --host 127.0.0.1
 ```
 
-## Workflow Demo
+Use the same DATABASE_URL when running the full test suite against that database. The sample
+credentials are local development values only. The split migration/application configuration
+is a tracked gap, not a recommended production setup. Settings currently read environment
+variables; creating a `.env` file alone does not configure the standalone application.
 
-### Create Workflow
+Do not start a worker expecting live execution in containment mode. Existing Docker/Compose
+files are development scaffolding and do not provide the required isolated execution plane.
+
+## Preview example
 
 ```bash
-curl -X POST http://localhost:8000/v1/workflows \
-  -H "Content-Type: application/json" \
-  -d '{"repository_url":"https://github.com/pallets/flask"}'
+curl -X POST http://127.0.0.1:8000/v1/patch-workflows/preview \
+  -H 'Content-Type: application/json' \
+  -d '{"repository_url":"https://github.com/example/project","branch_name":"adwe/preview","diff":"diff --git a/README.md b/README.md\n","commit_message":"Preview only"}'
 ```
 
-### List Workflows
-
-```bash
-curl http://localhost:8000/v1/workflows
-```
-
-### Get Workflow
-
-```bash
-curl http://localhost:8000/v1/workflows/<workflow_id>
-```
-
-### Workflow Summary
-
-```bash
-curl http://localhost:8000/v1/workflows/<workflow_id>/summary
-```
-
-### Workflow Artifacts
-
-```bash
-curl http://localhost:8000/v1/workflows/<workflow_id>/artifacts
-```
-
-### Workflow Pull Request
-
-```bash
-curl http://localhost:8000/v1/workflows/<workflow_id>/pull-request
-```
-
-### Workflow Metrics
-
-```bash
-curl http://localhost:8000/v1/workflow-metrics
-```
-
-### Workflow Metrics Dashboard
-
-```bash
-curl http://localhost:8000/v1/workflow-metrics
-
-### Queue Metrics
-
-```bash
-curl http://localhost:8000/v1/queue-metrics
-```
-
-### Successful PR Demo
-
-ADWE successfully executed the full workflow:
-
-```text
-workflow created
-patch generated
-patch approved
-patch applied
-branch pushed
-pull request opened
-pull request persisted
-workflow linked to pull request
-
-```
-
-Example pull request: 
-
-Latest successful PR: https://github.com/jennasilvera/adwe/pull/3
-
-## GitHub Authentication
-
-For private repositories create a GitHub Personal Access Token.
-
-Create a local `.env` file:
-
-```env
-GITHUB_TOKEN=your_token_here
-```
-
-## Database Migrations
-
-Generate migration:
-
-```bash
-PYTHONPATH=src uv run alembic revision --autogenerate -m "description"
-```
-
-Apply migration:
-
-```bash
-PYTHONPATH=src uv run alembic upgrade head
-```
-
-## Testing
-
-Run all tests:
-
-```bash
-PYTHONPATH=src uv run pytest
-```
-
-## Pre-Push Checklist
-
-```bash
-PYTHONPATH=src uv run pytest
-PYTHONPATH=src uv run alembic upgrade head
-docker compose config
-```
-
-## Technology Stack
-
-* Python 3.12
-* FastAPI
-* PostgreSQL
-* SQLAlchemy
-* Alembic
-* Redis
-* ARQ
-* LangGraph
-* Docker
-* GitHub Actions
-* Prometheus
-
-### Patch Prioritization
-
-ADWE ranks generated patch proposals before review.
-
-Each proposed patch includes:
-
-- `priority_score`
-- `priority_reason`
-- `summary`
-- `files_changed`
-- `reasoning`
-
-This allows reviewers to approve high-impact changes first, such as CI workflows, migration validation, Docker health checks, or API surface documentation.
-
-
-## Roadmap
-
-### Phase 1 (Completed)
-
-* Workflow orchestration
-* Repository analysis
-* Implementation planning
-* Audit logging
-* Metrics
-* Queue processing
-
-### Phase 2 (In Progress)
-
-* Branch management
-* Patch workflow
-* Pull request records
-* Workflow artifact APIs
-
-
-### Phase 3 (Planned)
-
-* Real repository cloning
-* Patch application
-* Commit generation
-* GitHub pull request creation
-* End-to-end autonomous development workflow
-
-```
-```
-
+Preview extracts a summary; it is not proof that a patch is valid, safe, authorized or tested.

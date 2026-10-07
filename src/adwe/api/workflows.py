@@ -1,14 +1,17 @@
 import logging
-from adwe.models.pull_request_record_schema import PullRequestRecordRead
+
 from arq import create_pool
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from adwe.models.workflow_artifacts_schema import WorkflowArtifactsRead
-from adwe.models.workflow_summary_schema import WorkflowSummaryRead
+
+from adwe.api.execution_policy import require_live_operations
 from adwe.db.session import AsyncSessionLocal
+from adwe.models.pull_request_record_schema import PullRequestRecordRead
 from adwe.models.workflow import Workflow
+from adwe.models.workflow_artifacts_schema import WorkflowArtifactsRead
 from adwe.models.workflow_schema import WorkflowCreate, WorkflowRead
 from adwe.models.workflow_status import WorkflowStatus
+from adwe.models.workflow_summary_schema import WorkflowSummaryRead
 from adwe.services.audit import record_audit_event
 from adwe.workers.queue import get_redis_settings
 
@@ -27,7 +30,11 @@ async def enqueue_workflow_run(workflow_id: str) -> str:
     return job.job_id
 
 
-@router.post("", response_model=WorkflowRead)
+@router.post(
+    "",
+    response_model=WorkflowRead,
+    dependencies=[Depends(require_live_operations)],
+)
 async def create_workflow(payload: WorkflowCreate):
     async with AsyncSessionLocal() as session:
         workflow = Workflow(
@@ -74,7 +81,11 @@ async def get_workflow(workflow_id: str):
         return workflow
 
 
-@router.post("/{workflow_id}/run", response_model=WorkflowRead)
+@router.post(
+    "/{workflow_id}/run",
+    response_model=WorkflowRead,
+    dependencies=[Depends(require_live_operations)],
+)
 async def run_workflow_endpoint(workflow_id: str):
     async with AsyncSessionLocal() as session:
         workflow = await session.get(Workflow, workflow_id)

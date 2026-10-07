@@ -5,6 +5,7 @@ from adwe.models.patch import Patch
 from adwe.models.patch_status import PatchStatus
 from adwe.models.workflow import Workflow
 from adwe.services.audit import record_audit_event
+from adwe.services.execution_policy import Operation, require_operation
 from adwe.services.patch_workflow import apply_patch_workflow
 from adwe.services.pull_request_records import record_pull_request
 
@@ -12,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 async def apply_patch_job(ctx, patch_id: str):
+    require_operation(Operation.PATCH_EXECUTION)
     async with AsyncSessionLocal() as session:
         patch = await session.get(Patch, patch_id)
 
