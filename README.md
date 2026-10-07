@@ -1,6 +1,6 @@
 # Agentic Development Workflow Engine
 
-[![CI](https://github.com/jennasilvera/adwe/actions/workflows/ci.yml/badge.svg?branch=hardening%2Fproduction-foundation)](https://github.com/jennasilvera/adwe/actions/workflows/ci.yml)
+[![CI](https://github.com/jennasilvera/agentic-development-workflow-engine/actions/workflows/ci.yml/badge.svg?branch=hardening%2Fproduction-foundation)](https://github.com/jennasilvera/agentic-development-workflow-engine/actions/workflows/ci.yml)
 
 **ADWE is a platform for controlled AI-assisted software development.** Its purpose is to
 turn an engineering task into a reviewable repository change with explicit authorization,

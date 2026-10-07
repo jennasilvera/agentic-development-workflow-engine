@@ -22,8 +22,8 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/jennasilvera/adwe"
-Issues = "https://github.com/jennasilvera/adwe/issues"
+Repository = "https://github.com/jennasilvera/agentic-development-workflow-engine"
+Issues = "https://github.com/jennasilvera/agentic-development-workflow-engine/issues"
 
 [dependency-groups]
 dev = [
