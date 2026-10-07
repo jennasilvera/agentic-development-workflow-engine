@@ -19,6 +19,8 @@ are rebuilt. This is an active implementation, not a production-ready release.
 | --- | --- |
 | Operator authentication | Bearer authentication on application APIs, health and metrics; missing configuration fails closed |
 | Repository registry | Canonical GitHub identities, duplicate-safe registration, bounded listing, enable/disable controls |
+| Metadata intake | Immutable task/revision inputs, idempotent submissions, pinned GitHub repository IDs and persisted public revision observations |
+| Durable handoff | Transactional outbox, fenced leases and deduplicated inbox delivery; no execution authority |
 | Patch review | Approval and rejection bound to the exact diff digest; operator identity and timestamp recorded |
 | Concurrency and audit | PostgreSQL uniqueness/row locks; decisions and audit events commit together |
 | Legacy reconciliation | Ambiguous execution labels quarantined as `requires_review`, with original status/evidence retained |
@@ -101,6 +103,10 @@ all application operations, including `/metrics` and `/v1/health`, require beare
 | Register repository | `POST /v1/repositories` | 201 for new identity; 200 for an existing identity |
 | List repositories | `GET /v1/repositories?limit=50&offset=0` | Bounded page with `next_offset` |
 | Enable/disable | `PATCH /v1/repositories/{id}` | Accepts `enabled`; does not start a run |
+| Pin provider identity | `POST /v1/repositories/{id}/identity` | Immutable operator-selected numeric GitHub repository ID |
+| Submit task input | `POST /v1/submissions` | Requires `Idempotency-Key`; records input without admitting execution |
+| Submission evidence | `GET /v1/submissions/{id}/status` | Delivery, receipt and observation status; execution remains false |
+| Observe revision | `POST /v1/submissions/{id}/observe` | Bounded public metadata lookup after inbox delivery |
 | Read patch | `GET /v1/workflows/{workflow_id}/patches/{patch_id}` | Includes current `diff_sha256` and approval evidence |
 | Approve/reject | `POST .../patches/{patch_id}/approve` or `/reject` | Requires `expected_diff_sha256`; stale/illegal decisions return 409 |
 | Preview | `POST /v1/patch-workflows/preview` | Read-only summary, not validation or authorization |
@@ -136,10 +142,11 @@ PYTHONPATH=src uv run --frozen pytest tests/integration -q
 Integration tests fail if PostgreSQL is unavailable; they do not silently skip or substitute
 SQLite. Registry/lifecycle fixtures create and drop isolated random schemas. Use a disposable
 test database. The preserved workflow timeline test uses DATABASE_URL and migrated tables.
-CI installs frozen dependencies, applies migrations, runs both suites and validates Compose.
+CI installs frozen dependencies, applies migrations, runs both suites, restores a disposable
+backup and tests recovery, validates Compose, and smoke-tests the restricted non-root image.
 
-Targeted lint/type checks accompany each increment. Whole-project static cleanup, container
-hardening, crash recovery and adversarial executor qualification remain roadmap work.
+Targeted static checks accompany each increment. Whole-project static cleanup, full execution
+recovery and adversarial executor qualification remain roadmap work.
 
 ## Engineering documentation
 
@@ -151,24 +158,22 @@ hardening, crash recovery and adversarial executor qualification remain roadmap 
 - [Operator admission ADR](docs/adr/001-single-operator-admission.md).
 - [Patch review and migration](docs/patch-review.md).
 
-Next foundations: immutable repository/revision/task binding, transactional run admission,
-durable worker recovery, isolated execution, typed model proposals and reconciled publication.
+## Supported intake and remaining work
 
-Run admission is under development. The [immutable run-input contract](docs/run-input.md)
-defines versioned task/repository/revision identity; it does not yet admit or execute runs.
+The [metadata intake guide](docs/metadata-intake.md) connects repository registration and
+provider-ID pinning, immutable task submission, explicit inbox delivery, and persisted public
+GitHub revision observations under `public-metadata-v1`. A submission and a successful
+observation remain distinct from execution admission. The status API always reports
+`execution_admitted: false`.
 
-An internal submission service now persists those inputs with repository checks, request-key
-idempotency and atomic audit. Submissions remain unverified and cannot dispatch execution.
+- [Run-input contract](docs/run-input.md): canonical identity and digest.
+- [Verification outbox](docs/submission-outbox.md): fenced delivery and durable receipt.
+- [Revision observations](docs/revision-observation.md): bounded provider lookup and its limits.
+- [Deployment](docs/deployment.md): migration-first startup, container checks and release blockers.
+- [Recovery drill](docs/recovery.md): backup restoration, evidence checks and delivery replay.
 
-The [verification outbox](docs/submission-outbox.md) records submission intents atomically and
-provides bounded, fenced delivery leases. An explicit one-pass dispatcher delivers to a durable inbox; revision verification and execution remain blocked.
-
-A [bounded public GitHub revision adapter](docs/revision-observation.md) can observe exact
-commit/tree metadata. It is not yet connected to intake, and does not authorize execution.
-
-The [authenticated metadata intake flow](docs/metadata-intake.md) now connects repository-ID
-pinning, submissions, inbox delivery and persisted GitHub observations under `public-metadata-v1`.
-Read `/v1/submissions/{id}/status` for evidence. Execution admission remains false.
-
-See [deployment and release limits](docs/deployment.md) for migration-first Compose startup,
-non-root container operation, CI image checks and the remaining production blockers.
+Remaining product work includes admitted-run lifecycle, isolated repository acquisition and
+execution, typed model proposals with budgets and evaluations, validated changesets, and
+reconciled publication. Production release also requires deployment-specific recovery,
+monitoring, capacity and security qualification. These are open requirements, not capabilities
+provided by the current control plane.

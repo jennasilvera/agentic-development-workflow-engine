@@ -113,9 +113,9 @@ until its acceptance evidence exists. Preserve legacy data and public contracts 
 - Recovery: immutable prior image plus schema-compatible rollback; feature admission stops
   before data repair; preserve audit/effect history through rollback.
 
-Next after phase 0: implement phase 1's authenticated read/write admission and repository
-registration in a separately tested increment, then lifecycle migration. Do not re-enable
-host commands as a shortcut while the isolated executor is under development.
+The increment log below records completed prerequisites. Historical “next” entries describe
+the state at that increment; the current scope and open requirements are summarized in README.
+Do not re-enable host commands while the isolated executor is under development.
 
 ## Increment 1a: implemented operator and registry foundation
 
@@ -203,3 +203,11 @@ packaged migrations. Compose waits for healthy PostgreSQL and successful migrati
 development ports to localhost, omits provider credentials and keeps legacy workers opt-in.
 CI now builds and smoke-tests the restricted image. This is control-plane hardening, not
 an untrusted-code executor or production release qualification. See docs/deployment.md.
+
+## Recovery verification
+
+Added a CI drill that creates two disposable databases, seeds delivered/pending/uncertain
+handoffs and revision evidence, backs up with pg_dump and restores with pg_restore. It compares
+all table data, exercises restored immutability triggers, replays pending/expired delivery,
+checks receipt deduplication and rejects the pre-recovery lease. This qualifies fixture recovery
+only; it does not establish a production RPO/RTO, off-site backup policy or execution recovery.

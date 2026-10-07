@@ -44,6 +44,11 @@ jobs:
       - name: PostgreSQL integration tests
         run: PYTHONPATH=src uv run --frozen pytest tests/integration
 
+      - name: Backup, restore and recovery drill
+        env:
+          ADWE_DRILL_CONTAINER: ${{ job.services.postgres.id }}
+        run: PYTHONPATH=src uv run --frozen python scripts/recovery_drill.py
+
       - name: Validate Docker Compose
         run: docker compose config
 
@@ -64,6 +69,7 @@ jobs:
       - name: Check startup and authentication
         run: |
           python - <<'PY'
+          import http.client
           import time
           import urllib.error
           import urllib.request
@@ -72,7 +78,7 @@ jobs:
                   with urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=2) as response:
                       assert response.status == 200
                   break
-              except (urllib.error.URLError, TimeoutError):
+              except (urllib.error.URLError, OSError, http.client.RemoteDisconnected):
                   time.sleep(1)
           else:
               raise SystemExit('API did not start')
