@@ -153,3 +153,6 @@ hardening, crash recovery and adversarial executor qualification remain roadmap 
 
 Next foundations: immutable repository/revision/task binding, transactional run admission,
 durable worker recovery, isolated execution, typed model proposals and reconciled publication.
+
+Run admission is under development. The [immutable run-input contract](docs/run-input.md)
+defines versioned task/repository/revision identity; it does not yet admit or execute runs.

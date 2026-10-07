@@ -140,3 +140,12 @@ statuses migrate to requires_review with prior status/evidence preserved. Downgr
 those decisions from silent loss. The undefined rejection-handler job_id is removed.
 Execution/worker admission remains contained; no completed execution can be asserted by the
 operator-decision API. Next: immutable repository/revision/task bindings and atomic run admission.
+
+## Increment 1c: immutable run-input domain contract
+
+Implemented a bounded, versioned task specification and immutable repository/revision/task/
+policy binding with canonical serialization and a domain-separated SHA-256 digest. Tests
+cover changed inputs, nested immutability, invalid/coerced/oversized fields, full revisions,
+URL normalization, criterion order and a fixed digest vector. See docs/run-input.md.
+This is a prerequisite only: atomic admission, database persistence, repository membership
+verification and outbox scheduling remain unimplemented. Execution containment is unchanged.
