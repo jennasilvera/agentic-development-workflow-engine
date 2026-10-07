@@ -165,3 +165,7 @@ provides bounded, fenced delivery leases. An explicit one-pass dispatcher delive
 
 A [bounded public GitHub revision adapter](docs/revision-observation.md) can observe exact
 commit/tree metadata. It is not yet connected to intake, and does not authorize execution.
+
+The [authenticated metadata intake flow](docs/metadata-intake.md) now connects repository-ID
+pinning, submissions, inbox delivery and persisted GitHub observations under `public-metadata-v1`.
+Read `/v1/submissions/{id}/status` for evidence. Execution admission remains false.

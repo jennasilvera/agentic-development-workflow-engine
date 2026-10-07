@@ -13,6 +13,7 @@ from adwe.api.pull_requests import router as pull_requests_router
 from adwe.api.queue import router as queue_router
 from adwe.api.queue_metrics import router as queue_metrics_router
 from adwe.api.repositories import router as repositories_router
+from adwe.api.submissions import router as submissions_router
 from adwe.api.worker_health import router as worker_health_router
 from adwe.api.workflow_analytics import router as workflow_analytics_router
 from adwe.api.workflow_leaderboard import router as workflow_leaderboard_router
@@ -33,6 +34,7 @@ app = FastAPI(
 
 app.add_middleware(RequestIDMiddleware)
 app.include_router(repositories_router)
+app.include_router(submissions_router)
 app.include_router(workflow_timeline_router)
 app.include_router(workflows_router)
 app.include_router(worker_health_router)

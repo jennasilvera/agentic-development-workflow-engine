@@ -186,3 +186,12 @@ and ambiguous responses, caps body size and elapsed time, and reports classified
 This is not admission or branch-membership proof. Observations are not yet persisted or wired
 into inbox processing. Next: pin provider identity in registration, trusted policy selection,
 persisted fresh evidence and atomic admission. See docs/revision-observation.md.
+
+## Increment 1f: authenticated metadata intake and persisted evidence
+
+Added explicit immutable provider-ID pinning, authenticated submission/read/status/observation
+APIs, fixed metadata-only policy and immutable revision observations with transactional audit.
+Observation persistence rechecks enabled registration after network I/O and enforces exact
+input/provider identities and freshness. Added real-PostgreSQL API, concurrency, disable-during-
+lookup, wrong-policy, unpinned, stale-evidence, rollback and database-guard tests.
+No execution is admitted. See docs/metadata-intake.md.

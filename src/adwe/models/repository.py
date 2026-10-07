@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -17,6 +18,10 @@ from adwe.db.base import Base
 class Repository(Base):
     __tablename__ = "repositories"
     __table_args__ = (
+        CheckConstraint(
+            "github_repository_id IS NULL OR github_repository_id > 0",
+            name="ck_repository_github_id",
+        ),
         UniqueConstraint("canonical_url", name="uq_repositories_canonical_url"),
         CheckConstraint(
             "canonical_url ~ '^https://github[.]com/[a-z0-9][a-z0-9-]{0,38}/[a-z0-9_.-]{1,100}$' "
@@ -33,6 +38,7 @@ class Repository(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid4())
     )
+    github_repository_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     canonical_url: Mapped[str] = mapped_column(String(160), nullable=False)
     registered_by: Mapped[str] = mapped_column(String(64), nullable=False)
     enabled: Mapped[bool] = mapped_column(

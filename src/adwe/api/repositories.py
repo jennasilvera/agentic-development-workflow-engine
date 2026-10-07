@@ -3,6 +3,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -92,3 +93,32 @@ async def update_repository(
         if repository is None:
             raise missing_repository()
         return RepositoryRead.model_validate(repository)
+
+
+class ProviderIdentityPin(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    github_repository_id: Annotated[int, Field(strict=True, gt=0, le=2**63 - 1)]
+
+
+@router.post("/{repository_id}/identity", response_model=RepositoryRead)
+async def pin_identity(
+    repository_id: UUID, payload: ProviderIdentityPin, session: Session, actor: Actor
+):
+    from adwe.services.revision_verification import (
+        VerificationConflict,
+        pin_repository_identity,
+    )
+
+    try:
+        async with session.begin():
+            repo = await pin_repository_identity(
+                session,
+                str(repository_id),
+                payload.github_repository_id,
+                actor.actor_id,
+            )
+            return RepositoryRead.model_validate(repo)
+    except VerificationConflict as exc:
+        raise HTTPException(
+            409, detail={"code": "identity_conflict", "message": str(exc)}
+        ) from None

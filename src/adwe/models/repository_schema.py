@@ -23,6 +23,7 @@ class RepositoryUpdate(BaseModel):
 class RepositoryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
+    github_repository_id: int | None = None
     canonical_url: str
     registered_by: str
     enabled: bool
