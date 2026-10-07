@@ -20,6 +20,7 @@ are rebuilt. This is an active implementation, not a production-ready release.
 | Operator authentication | Bearer authentication on application APIs, health and metrics; missing configuration fails closed |
 | Repository registry | Canonical GitHub identities, duplicate-safe registration, bounded listing, enable/disable controls |
 | Metadata intake | Immutable task/revision inputs, idempotent submissions, pinned GitHub repository IDs and persisted public revision observations |
+| Durable model accounting | Immutable per-submission policy, committed call/output-token reservations and attempt outcomes across workers and restarts; no monetary spending cap |
 | Model proposal contract | Internal provider-neutral gateway with strict input/content identity, bounded calls and validated text replacements; no live provider or execution wiring |
 | Durable handoff | Transactional outbox, fenced leases and deduplicated inbox delivery; no execution authority |
 | Patch review | Approval and rejection bound to the exact diff digest; operator identity and timestamp recorded |

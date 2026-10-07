@@ -67,3 +67,40 @@ Before enabling a live path, implement a selected provider adapter with transpor
 explicit credential handling, durable budgets/attempt provenance, verified curated context,
 independent changeset validation, an isolated executor and task-level model evaluations.
 The gateway does not remove any existing containment decision.
+
+## Durable reservation path
+
+`create_model_budget` stores one immutable operator-selected policy per submission. Identical
+configuration is idempotent; changed limits or actor conflict. `propose_with_budget` snapshots
+caller input, checks its exact run-input identity and repository enablement, locks the budget,
+reserves one attempt, and commits its audit before provider I/O. The gateway then validates the
+reply and commits immutable result evidence and audit in a separate transaction. No database
+transaction spans the provider call. Disabling a repository prevents subsequent reservations;
+it cannot revoke an already committed attempt or recall text sent to a provider.
+
+Reservations are append-only. Their count and sum are the budget authority across workers and
+restarts. Database triggers also reject attempts beyond the fixed limits and prevent record
+updates/deletions. Result identity and reported output usage bind to the reserved attempt and
+policy. Schema creation must use Alembic; ORM metadata alone does not install these database
+checks and triggers. Populated downgrade is refused.
+
+The submission/request-key pair can be reserved only once, even if input changes. A duplicate
+raises `AttemptConflict` and never invokes the provider. Inspect existing records; do not treat
+this conflict as permission to generate a fresh key automatically. A new key consumes another
+reservation and is an explicit application decision. There is no automatic recovery retry.
+
+A reservation without a result means **unknown outcome**: the process may have stopped before
+the call, after remote completion, or during result persistence. Cancellation/programming errors
+leave that state. Timeout/transport errors record `uncertain`; other classified gateway errors
+record `failed`. None refunds budget. `failed` does not imply zero provider charges. A successful
+result means validated proposal shape and identity only, not correct code or executed tests.
+
+This internal path persists proposal text in PostgreSQL, so existing database access controls,
+backup handling and eventual retention policy must cover source-derived model output. Error
+records store only classified codes. No public endpoints or live provider adapters are enabled.
+The original instance-only gateway remains a testable contract, not the durable entry point.
+
+Durable **call and output-token reservations** are implemented. Monetary/input-token limits,
+provider billing reconciliation, deployment-wide budgets spanning multiple submissions,
+failed-attempt reconciliation and provider idempotency still require implementation. The fixed
+per-submission budget is not a global spending cap.

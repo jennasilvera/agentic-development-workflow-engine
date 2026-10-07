@@ -228,3 +228,13 @@ refund uncertain reservations; there is no implicit retry/fallback or execution 
 Deterministic provider fixtures cover shape, identity, bounds and concurrency. The gateway is
 not wired to live provider transport, persistence or workers; durable billing budgets, adapters,
 verified acquisition, task evaluations and execution remain open. See docs/model-gateway.md.
+
+## Increment 4b: durable model reservations and outcomes
+
+Added immutable per-submission model budgets, append-only call/output-token reservations and
+identity-bound outcomes. The internal durable proposal entry point commits reservation/audit
+before provider I/O and commits validated evidence/audit afterward. Duplicate keys never call
+again; uncertain/cancelled attempts remain spent. Row locks and database guards enforce limits
+across workers/restarts; populated downgrade refuses data loss. PostgreSQL tests cover races,
+restart, cancellation, audit rollback, immutable records and migration behavior. Monetary and
+global budgets, billing reconciliation, live adapters and execution admission remain open.

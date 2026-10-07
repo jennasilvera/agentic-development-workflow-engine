@@ -7,6 +7,11 @@ from sqlalchemy.engine import make_url
 from adwe.core.config import settings
 from adwe.db.base import Base
 from adwe.models.audit_event import AuditEvent  # noqa: F401
+from adwe.models.model_attempt import (  # noqa: F401
+    ModelAttempt,
+    ModelAttemptResult,
+    ModelBudget,
+)
 from adwe.models.patch import Patch  # noqa: F401
 from adwe.models.pull_request import PullRequest  # noqa: F401
 from adwe.models.repository import Repository  # noqa: F401
