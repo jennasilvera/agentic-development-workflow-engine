@@ -8,17 +8,21 @@ def _candidate_targets(analysis: dict, recommended_steps: list[str]) -> list[str
     tools = analysis.get("detected_tools", {})
     targets: list[str] = []
 
-    if tools.get("alembic") and any("migration validation" in step.lower() for step in recommended_steps):
+    if tools.get("alembic") and any(
+        "migration validation" in step.lower() for step in recommended_steps
+    ):
         targets.append("docs/adwe-migration-validation.md")
 
-    if tools.get("docker") and any("health checks" in step.lower() for step in recommended_steps):
+    if tools.get("docker") and any(
+        "health checks" in step.lower() for step in recommended_steps
+    ):
         targets.append("docs/adwe-docker-healthchecks.md")
 
     if tools.get("fastapi") and analysis.get("api_routes"):
         targets.append("docs/adwe-api-surface.md")
 
     if tools.get("github_actions"):
-        targets.append(".github/workflows/ci.yml")
+        targets.append("docs/adwe-ci-recommendations.md")
 
     if not targets:
         targets.append("ADWE_ANALYSIS.md")
@@ -59,19 +63,29 @@ def _rule_based_plan(analysis: dict) -> dict:
 
     if len(test_files) < 10:
         risks.append("Test coverage appears light for a workflow automation platform.")
-        recommended_steps.append("Increase automated test coverage for API, workers, and services.")
+        recommended_steps.append(
+            "Increase automated test coverage for API, workers, and services."
+        )
     else:
         strengths.append("Substantial test suite detected.")
 
     if api_routes:
-        recommended_steps.append("Add endpoint-level smoke tests for all public API routes.")
+        recommended_steps.append(
+            "Add endpoint-level smoke tests for all public API routes."
+        )
     if database_models:
-        recommended_steps.append("Add database model relationship tests and migration regression tests.")
+        recommended_steps.append(
+            "Add database model relationship tests and migration regression tests."
+        )
     if "docker-compose.yml" in config_files:
-        recommended_steps.append("Add Docker Compose health checks for Postgres, Redis, API, and worker.")
+        recommended_steps.append(
+            "Add Docker Compose health checks for Postgres, Redis, API, and worker."
+        )
 
     recommended_steps.append("Add structured audit events for every agent transition.")
-    recommended_steps.append("Add workflow-level artifact summaries for recruiter-friendly demos.")
+    recommended_steps.append(
+        "Record evidence and limitations for each proposed repository change."
+    )
 
     candidate_targets = _candidate_targets(analysis, recommended_steps)
 
@@ -105,7 +119,7 @@ def _build_llm_prompt(analysis: dict) -> str:
         "You are a senior engineering-platform architect. "
         "Given this repository analysis, return a concise JSON implementation plan "
         "with keys: summary, strengths, risks, recommended_next_steps, candidate_targets. "
-        "candidate_targets should be repository files that could be modified or created. "
+        "candidate_targets must be documentation proposal paths from this list: ADWE_ANALYSIS.md, docs/adwe-migration-validation.md, docs/adwe-docker-healthchecks.md, docs/adwe-api-surface.md, docs/adwe-ci-recommendations.md. "
         "Do not include markdown.\n\n"
         f"{json.dumps(analysis, indent=2)}"
     )

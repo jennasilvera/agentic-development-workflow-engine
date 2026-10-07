@@ -31,7 +31,8 @@ are rebuilt. This is an active implementation, not a production-ready release.
 Repository registration does not verify remote access or enable execution. Patch approval
 means the operator reviewed that content; it does not mean tests ran, a commit was created
 or a PR was published. Historical planner/artifact helpers remain limited to heuristic
-inventory and Markdown proposals, not general-purpose task implementation.
+inventory and unvalidated Markdown proposals at fixed documentation paths, not general-purpose
+task implementation. Executable/configuration paths and arbitrary model-selected paths are rejected.
 
 ## Architecture
 

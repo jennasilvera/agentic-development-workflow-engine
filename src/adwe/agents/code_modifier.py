@@ -1,14 +1,30 @@
 from adwe.workflows.state import WorkflowState
 
+DOCUMENTATION_TARGETS = frozenset(
+    {
+        "ADWE_ANALYSIS.md",
+        "docs/adwe-migration-validation.md",
+        "docs/adwe-docker-healthchecks.md",
+        "docs/adwe-api-surface.md",
+        "docs/adwe-ci-recommendations.md",
+    }
+)
+
+
+def _validate_documentation_target(path: str) -> str:
+    if not isinstance(path, str) or path not in DOCUMENTATION_TARGETS:
+        raise ValueError("Legacy proposals support only fixed documentation targets")
+    return path
+
 
 def _new_file_patch(path: str, content: str) -> str:
+    _validate_documentation_target(path)
     lines = content.splitlines()
     added_lines = "".join(f"+{line}\n" for line in lines)
 
     return (
         f"diff --git a/{path} b/{path}\n"
         "new file mode 100644\n"
-        "index 0000000..d4f3c2a\n"
         "--- /dev/null\n"
         f"+++ b/{path}\n"
         f"@@ -0,0 +1,{len(lines)} @@\n"
@@ -17,8 +33,8 @@ def _new_file_patch(path: str, content: str) -> str:
 
 
 def _score_target(target_file: str) -> tuple[int, str]:
-    if target_file.startswith(".github/workflows/"):
-        return 95, "CI workflow changes have broad impact across all contributors."
+    if target_file == "docs/adwe-ci-recommendations.md":
+        return 95, "CI recommendations concern validation across all contributors."
 
     if "migration" in target_file:
         return 85, "Migration validation reduces production database deployment risk."
@@ -27,10 +43,16 @@ def _score_target(target_file: str) -> tuple[int, str]:
         return 75, "Docker health checks improve local and CI environment reliability."
 
     if "api" in target_file:
-        return 65, "API surface documentation improves maintainability and test planning."
+        return (
+            65,
+            "API surface documentation improves maintainability and test planning.",
+        )
 
     if target_file.startswith("docs/"):
-        return 45, "Documentation improves project clarity but has lower runtime impact."
+        return (
+            45,
+            "Documentation improves project clarity but has lower runtime impact.",
+        )
 
     return 30, "General repository artifact with limited operational impact."
 
@@ -46,17 +68,28 @@ def _select_patch_target(analysis: dict, plan: dict) -> tuple[str, str]:
     candidate_targets = plan.get("candidate_targets", [])
 
     if candidate_targets:
-        target = candidate_targets[0]
-        return target, f"Generated implementation artifact for {target}."
+        target = _validate_documentation_target(candidate_targets[0])
+        return target, f"Generated analysis documentation proposal for {target}."
 
-    if tools.get("alembic") and any("migration validation" in step.lower() for step in steps):
-        return "docs/adwe-migration-validation.md", "Generated migration validation documentation."
+    if tools.get("alembic") and any(
+        "migration validation" in step.lower() for step in steps
+    ):
+        return (
+            "docs/adwe-migration-validation.md",
+            "Generated migration validation documentation.",
+        )
 
     if tools.get("docker") and any("health checks" in step.lower() for step in steps):
-        return "docs/adwe-docker-healthchecks.md", "Generated Docker Compose health check recommendations."
+        return (
+            "docs/adwe-docker-healthchecks.md",
+            "Generated Docker Compose health check recommendations.",
+        )
 
     if tools.get("fastapi") and analysis.get("api_routes"):
-        return "docs/adwe-api-surface.md", "Generated API surface analysis documentation."
+        return (
+            "docs/adwe-api-surface.md",
+            "Generated API surface analysis documentation.",
+        )
 
     return "ADWE_ANALYSIS.md", "Generated repository-specific ADWE analysis artifact."
 
@@ -77,7 +110,7 @@ def _analysis_markdown(analysis: dict, plan: dict, target_file: str) -> str:
         f"Priority score: {priority_score}",
         f"Priority reason: {priority_reason}",
         "",
-        "This file was generated from repository analysis and implementation planning.",
+        "This is an unvalidated analysis proposal, not an implemented task or test result.",
         "",
         "## Repository Summary",
         "",
@@ -113,13 +146,16 @@ def _analysis_markdown(analysis: dict, plan: dict, target_file: str) -> str:
 
 
 def _build_modification(analysis: dict, plan: dict, target_file: str) -> dict:
+    _validate_documentation_target(target_file)
     content = _analysis_markdown(analysis, plan, target_file)
     patch = _new_file_patch(target_file, content)
     priority_score, priority_reason = _score_target(target_file)
 
     return {
         "status": "proposed",
-        "summary": f"Generated implementation artifact for {target_file}.",
+        "artifact_kind": "analysis_documentation",
+        "validation_status": "not_run",
+        "summary": f"Generated analysis documentation proposal for {target_file}.",
         "patch": patch,
         "target_file": target_file,
         "priority_score": priority_score,
@@ -141,9 +177,15 @@ def modify_code(state: WorkflowState):
         plan,
     )
 
+    if not isinstance(candidate_targets, list) or len(candidate_targets) > 20:
+        raise ValueError("Candidate targets must be a bounded list")
+    # Validate every supplied target, including ones beyond the output limit.
+    for target in candidate_targets:
+        _validate_documentation_target(target)
+    candidate_targets = list(dict.fromkeys(candidate_targets))
+
     code_modifications = [
-        _build_modification(analysis, plan, target)
-        for target in candidate_targets[:3]
+        _build_modification(analysis, plan, target) for target in candidate_targets[:3]
     ]
 
     code_modifications.sort(

@@ -211,3 +211,10 @@ handoffs and revision evidence, backs up with pg_dump and restores with pg_resto
 all table data, exercises restored immutability triggers, replays pending/expired delivery,
 checks receipt deduplication and rejects the pre-recovery lease. This qualifies fixture recovery
 only; it does not establish a production RPO/RTO, off-site backup policy or execution recovery.
+
+## Legacy proposal correctness
+
+Removed the Markdown-to-CI-YAML target mismatch and recruiter-oriented recommendations.
+Legacy analysis proposals now accept only fixed documentation paths, reject every invalid
+target before patch generation, deduplicate targets, and explicitly report validation not run.
+This fixes the unsafe artifact shape without claiming a task implementation/model gateway.

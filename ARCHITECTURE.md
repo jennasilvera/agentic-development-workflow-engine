@@ -17,7 +17,10 @@ The first containment increment denies repository acquisition, host test executi
 requests and publication. Offline planning on supplied inventory, diff preview, schema docs
 and authenticated read endpoints remain available. This is a development containment mode, not
 a production execution boundary. Single-operator API authentication and a PostgreSQL repository
-registry are now implemented; runs do not yet bind these registrations. See SECURITY.md for the exact contract and residual risks.
+registry are implemented. Immutable submissions now bind registered repository IDs, full
+commit IDs, task specifications and requested policy versions. Pinned GitHub identities and
+persisted public revision observations support metadata intake; no execution is admitted.
+See SECURITY.md for the exact contract and residual risks.
 
 ```mermaid
 flowchart TD
@@ -144,8 +147,9 @@ public docs contain schemas only. The operator identity is deployment-wide and g
 to legacy data. `repositories` stores unique canonical GitHub URLs, registration actor,
 enabled status and timezone-aware creation time. Registry mutations append actor-attributed
 legacy audit rows in the same transaction. Unique inserts and row locks make concurrent
-registration/state changes deterministic. No workflow-to-registry FK or revision model exists
-yet. Repository permission enforcement at execution must precede lifting containment.
+registration/state changes deterministic. Immutable submissions reference the registry and
+revision observations bind exact input digests. Legacy workflows remain separate. Repository
+permission enforcement at execution must precede lifting containment.
 
 Application and migrations share DATABASE_URL; Alembic changes only the driver to psycopg.
 Tests exercise PostgreSQL in isolated schemas; unit tests have no live DB dependency.
@@ -158,3 +162,26 @@ constraints reject stale approval content and unsupported status/evidence combin
 Migration 8c20d4e61f73 conservatively quarantines ambiguous legacy statuses. Neither existing
 worker execution nor immutable revision/task binding is enabled by these review decisions.
 See docs/patch-review.md for the transition table and recovery limits.
+
+## Implemented metadata and recovery boundary
+
+The authenticated submission API records versioned task input, canonical repository identity,
+full commit ID, policy version and a domain-separated digest. PostgreSQL insert triggers create
+one outbox intent atomically. A one-pass dispatcher commits a fenced claim before delivering
+the submission ID to a durable, deduplicating inbox, then acknowledges in another transaction.
+A receipt means durable acceptance only.
+
+An operator explicitly pins a GitHub numeric repository ID. Public metadata observation checks
+that ID, exact commit/tree IDs and repository state with bounded fixed-origin requests. The
+persistence transaction rechecks registration after network I/O and records immutable evidence
+and audit together. This proves neither branch membership nor code trust or execution authority.
+There is no admitted-run state machine or automatic executor.
+
+The legacy artifact helper now permits only fixed Markdown documentation targets, rejects
+executable/configuration paths, and marks output as unvalidated analysis documentation. It
+cannot implement requested code changes. A typed model gateway with budgets and independent
+changeset validation remains required before that functionality can be offered.
+
+CI verifies database migrations, concurrent transactional behavior, immutable evidence,
+backup/restore with delivery replay, and startup of the restricted non-root control-plane
+image. These checks do not establish an untrusted-code sandbox or production recovery SLO.
