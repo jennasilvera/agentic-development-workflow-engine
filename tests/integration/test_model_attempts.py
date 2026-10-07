@@ -267,3 +267,51 @@ async def test_reservation_audit_failure_prevents_provider_call(
     assert provider.calls == 0
     with engine.connect() as conn:
         assert conn.scalar(text("SELECT count(*) FROM model_attempts")) == 0
+
+
+@pytest.mark.asyncio
+async def test_output_reservation_limit_independent_of_call_limit(registry_database):
+    _, sessions, _ = registry_database
+    sid, data, _ = await setup(sessions, max_calls=3)
+    for key in ("one", "two"):
+        async with sessions() as session, session.begin():
+            await reserve_model_attempt(session, sid, key, data)
+    with pytest.raises(GatewayError, match="budget_exhausted"):
+        await propose_with_budget(sessions, sid, "three", data, Provider())
+
+
+@pytest.mark.asyncio
+async def test_disabled_repository_and_forged_result_are_rejected(registry_database):
+    engine, sessions, _ = registry_database
+    sid, data, _ = await setup(sessions)
+    async with sessions() as session, session.begin():
+        attempt_id, _ = await reserve_model_attempt(session, sid, "one", data)
+    with (
+        pytest.raises(DBAPIError, match="identity or usage mismatch"),
+        engine.begin() as conn,
+    ):
+        conn.execute(
+            text("""
+          INSERT INTO model_attempt_results(attempt_id,outcome,evidence)
+          VALUES (:id,'succeeded','{}')
+        """),
+            {"id": attempt_id},
+        )
+    with pytest.raises(DBAPIError), engine.begin() as conn:
+        conn.execute(
+            text("""
+          INSERT INTO model_attempt_results(attempt_id,outcome)
+          VALUES (:id,'failed')
+        """),
+            {"id": attempt_id},
+        )
+    from adwe.services.repositories import set_repository_enabled
+
+    async with sessions() as session, session.begin():
+        await set_repository_enabled(
+            session, data["run_input"]["repository_id"], False, "operator"
+        )
+    provider = Provider()
+    with pytest.raises(AttemptConflict, match="disabled"):
+        await propose_with_budget(sessions, sid, "two", data, provider)
+    assert provider.calls == 0
