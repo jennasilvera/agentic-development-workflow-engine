@@ -9,7 +9,7 @@ are not implemented production capabilities. Evidence paths are relative to repo
 | SEC-02 | P0 | No authentication/repository authorization on read/write APIs | Actor-scoped access tests, registered repository allowlist, deny by default; single-operator authentication now covers reads/writes/metrics; execution-specific repository authorization remains |
 | SEC-03 | P0 | Credential URL persistence and unbounded/symlink-unsafe acquisition: repository_clone.py, repository_analyzer.py | Credential-free worktree/config/logs; pinned SHA; hostile URL/path/symlink/size tests; acquisition currently blocked |
 | SEC-04 | P0 | Direct PR creation bypasses validations; Github effect before DB lookup | Exact changeset validation/approval and durable effect reconciliation; publication currently blocked |
-| COR-01 | P0 | Approval conflates APPLIED; rejection uses undefined job_id; worker has no claim guard | Atomic lifecycle transition/approval tests with two real DB connections, explicit legacy migration; routes/jobs contained |
+| COR-01 | P0 | Approval/application separation and rejection-handler fix implemented; worker claim/lease and verified completion remain | Atomic lifecycle transition/approval tests with two real DB connections, explicit legacy migration; routes/jobs contained |
 | DUR-01 | P1 | Enqueue before commit; no outbox or reconciliation | Crash matrix covering commit/dispatch/ack; no lost work and safe duplicate handling |
 | DUR-02 | P1 | No checkpoint, lease/fencing, cancellation or stale-run recovery | Worker kill/restart/concurrency tests; terminal states immutable; bounded classified retries |
 | REV-01 | P1 | Separate moving-HEAD clones; shared branch across patches | Persisted base SHA, aggregated changeset digest, branch conflict handling and deterministic replay |
@@ -34,3 +34,6 @@ guard, even if other functional tests pass.
 
 Progress: single-operator authentication and transactional repository registration are implemented.
 This is partial phase 1, not completion of lifecycle, revision binding or isolated execution.
+
+Patch decision transition, exact-diff binding, concurrent review and conservative legacy-state
+migration are implemented. Durable worker ownership and revision-bound execution remain blocked.

@@ -1,7 +1,7 @@
 [project]
 name = "adwe"
 version = "0.1.0"
-description = "Add your description here"
+description = "Controlled AI-assisted software development with authenticated APIs and auditable patch review"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -20,6 +20,10 @@ dependencies = [
     "sqlalchemy>=2.0.50",
     "uvicorn[standard]>=0.30.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/jennasilvera/adwe"
+Issues = "https://github.com/jennasilvera/adwe/issues"
 
 [dependency-groups]
 dev = [

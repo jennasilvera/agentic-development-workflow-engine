@@ -149,3 +149,12 @@ yet. Repository permission enforcement at execution must precede lifting contain
 
 Application and migrations share DATABASE_URL; Alembic changes only the driver to psycopg.
 Tests exercise PostgreSQL in isolated schemas; unit tests have no live DB dependency.
+
+## Implemented increment: patch decisions
+
+Operator approval/rejection now binds the exact UTF-8 diff digest under a row lock and records
+actor/time plus an audit event in the same transaction. Approval is not application. Database
+constraints reject stale approval content and unsupported status/evidence combinations.
+Migration 8c20d4e61f73 conservatively quarantines ambiguous legacy statuses. Neither existing
+worker execution nor immutable revision/task binding is enabled by these review decisions.
+See docs/patch-review.md for the transition table and recovery limits.

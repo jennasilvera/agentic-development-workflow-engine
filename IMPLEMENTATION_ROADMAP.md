@@ -131,3 +131,12 @@ host commands as a shortcut while the isolated executor is under development.
 
 Next increment: truthful patch approval/application lifecycle, explicit legacy-state migration,
 then immutable repository/revision/task bindings and atomic run admission.
+
+## Increment 1b: content-bound patch review
+
+Approve/reject now use an explicit content digest, operator attribution, legal transitions,
+row locking and transactional audit. Approval is distinct from application. Legacy ambiguous
+statuses migrate to requires_review with prior status/evidence preserved. Downgrade protects
+those decisions from silent loss. The undefined rejection-handler job_id is removed.
+Execution/worker admission remains contained; no completed execution can be asserted by the
+operator-decision API. Next: immutable repository/revision/task bindings and atomic run admission.

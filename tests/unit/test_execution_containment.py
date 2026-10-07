@@ -32,8 +32,6 @@ PATCH = {
     [
         ("/v1/workflows", {"repository_url": "https://github.com/example/project"}),
         ("/v1/workflows/run-1/run", None),
-        ("/v1/workflows/run-1/patches/patch-1/approve", None),
-        ("/v1/workflows/run-1/patches/patch-1/reject", None),
         ("/v1/workflows/run-1/patches/patch-1/apply?push=true&open_pr=true", None),
         ("/v1/patch-workflows/apply", PATCH),
         (

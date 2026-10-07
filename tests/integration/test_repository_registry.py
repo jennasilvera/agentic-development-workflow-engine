@@ -167,6 +167,9 @@ def test_database_rejects_noncanonical_identity(registry_database, url):
 def test_populated_downgrade_refuses_data_loss_then_empty_roundtrip(registry_database):
     engine, _, config = registry_database
     with engine.begin() as conn:
+        config.attributes["connection"] = conn
+        command.downgrade(config, "7b91e2c40a16")
+    with engine.begin() as conn:
         conn.execute(
             Repository.__table__.insert().values(
                 id=str(uuid4()),

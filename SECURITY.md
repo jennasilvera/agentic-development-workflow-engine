@@ -8,7 +8,7 @@ ADWE is not approved for production use or untrusted repository execution.
 patch execution, host tests and publication. There is no environment opt-in. These are
 release containment decisions, not a finished per-actor authorization/policy engine.
 
-- Authenticated legacy live-workflow mutation routes return HTTP **503**, with `detail.code` equal to
+- Authenticated live-execution/publication routes return HTTP **503**, with `detail.code` equal to
   `operation_unavailable` and `detail.policy_version` equal to `containment-v1`.
   Rejection happens before route database/queue/external effects. Request parsing may still
   return validation errors for malformed transport input.
@@ -26,7 +26,7 @@ release containment decisions, not a finished per-actor authorization/policy eng
 - Denials log a constant operation name, code and policy version. No URL, command, diff,
   token or request body is logged by the guard. These log records are not durable audit rows.
 
-Compatibility change: callers that previously created workflows, approved/rejected/applied
+Compatibility change: callers that previously created workflows, applied
 patches, ran tests or published PRs now receive explicit unavailability. Lack of a GitHub
 credential no longer produces a success-shaped skipped PR. Low-level Git helpers still exist
 for trusted local fixture development; they are not supported untrusted execution interfaces.
@@ -84,3 +84,12 @@ reconcile before an explicit data-removal/downgrade procedure.
 This single-operator deployment grants that identity all existing data access. It does not
 implement multitenancy, per-user roles, token expiry, SSO, API rate limits or immutable audit
 storage. See [ADR 001](docs/adr/001-single-operator-admission.md).
+
+## Content-bound patch decisions
+
+Authenticated approval/rejection is now enabled as metadata-only administration. Both require
+an expected diff digest. Approval stores actor/time/digest and no longer marks a patch applied.
+PostgreSQL locks serialize concurrent decisions and constraints prevent stale approved content.
+Legacy ambiguous statuses are quarantined with original evidence preserved; these rows cannot
+be reapproved or replayed through the decision API. Execution remains blocked. See
+[patch review](docs/patch-review.md) for compatibility and migration procedures.
