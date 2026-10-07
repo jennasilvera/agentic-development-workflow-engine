@@ -1,3 +1,5 @@
+from adwe.services.errors import TestExecutionError
+from adwe.services.execution_policy import Operation, require_operation
 from adwe.services.git_branch import create_branch
 from adwe.services.git_commit import commit_changes
 from adwe.services.git_push import push_branch
@@ -5,7 +7,6 @@ from adwe.services.github_pr import create_pull_request
 from adwe.services.patch_apply import apply_patch
 from adwe.services.test_runner import run_tests
 from adwe.services.workspace import repository_workspace
-from adwe.services.errors import TestExecutionError
 
 
 def apply_patch_workflow(
@@ -20,6 +21,7 @@ def apply_patch_workflow(
     pr_title: str | None = None,
     pr_body: str | None = None,
 ) -> dict:
+    require_operation(Operation.PATCH_EXECUTION)
     with repository_workspace(repository_url) as repo_path:
         create_branch(repo_path, branch_name)
         apply_patch(repo_path, diff)

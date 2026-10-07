@@ -1,23 +1,12 @@
-import os
-import subprocess
+"""Host execution is unavailable until an isolated execution backend exists."""
+
 from pathlib import Path
+
+from adwe.services.execution_policy import Operation, require_operation
 
 
 def run_tests(repo_path: Path, command: list[str]) -> dict:
-    env = os.environ.copy()
-    env.pop("GITHUB_TOKEN", None)
-
-    process = subprocess.run(
-        command,
-        cwd=repo_path,
-        env=env,
-        capture_output=True,
-        text=True,
-    )
-
-    return {
-        "passed": process.returncode == 0,
-        "exit_code": process.returncode,
-        "stdout": process.stdout,
-        "stderr": process.stderr,
-    }
+    # Even an allowlisted pytest command executes arbitrary repository code.
+    # Keep the public signature for callers, but never spawn a host process.
+    require_operation(Operation.HOST_TEST_EXECUTION)
+    raise AssertionError("Host test execution has no authorized backend")

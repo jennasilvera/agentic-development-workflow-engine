@@ -1,320 +1,194 @@
 # Agentic Development Workflow Engine
 
-![CI](https://github.com/jennasilvera/adwe/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/jennasilvera/agentic-development-workflow-engine/actions/workflows/ci.yml/badge.svg?branch=hardening%2Fproduction-foundation)](https://github.com/jennasilvera/agentic-development-workflow-engine/actions/workflows/ci.yml?query=branch%3Ahardening%2Fproduction-foundation)
 
-Agentic Development Workflow Engine (ADWE) is a production-oriented platform engineering project that analyzes repositories, generates implementation plans, orchestrates agent workflows, records audit events, and lays the foundation for automated code modification and pull request creation.
+**ADWE is a platform for controlled AI-assisted software development.** Its purpose is to
+turn an engineering task into a reviewable repository change with explicit authorization,
+reproducible validation and a traceable record of every consequential action.
+
+Models propose changes. The platform owns policy, execution and evidence.
+
+The implementation is on `hardening/production-foundation` in [draft PR #4](https://github.com/jennasilvera/agentic-development-workflow-engine/pull/4).
+The default `master` branch has not been updated or merged. The CI badge above tracks the
+development branch. It implements authenticated metadata intake, repository registration,
+content-bound patch review, a typed model gateway and durable model-attempt accounting. Live repository acquisition, code execution
+and GitHub publication remain disabled while durable orchestration and execution isolation
+are rebuilt. This is an active implementation, not a production-ready release.
+
+## What works today
+
+| Capability | Implemented behavior |
+| --- | --- |
+| Operator authentication | Bearer authentication on application APIs, health and metrics; missing configuration fails closed |
+| Repository registry | Canonical GitHub identities, duplicate-safe registration, bounded listing, enable/disable controls |
+| Metadata intake | Immutable task/revision inputs, idempotent submissions, pinned GitHub repository IDs and persisted public revision observations |
+| OpenAI transport adapter | Opt-in fixed-origin Chat Completions adapter with bounded responses, explicit credentials and no retries; tested with synthetic transport, not enabled in APIs/workers |
+| Durable model accounting | Immutable per-submission policy, committed call/output-token reservations and attempt outcomes across workers and restarts; no monetary spending cap |
+| Model proposal contract | Internal provider-neutral gateway with strict input/content identity, bounded calls and validated text replacements; no live provider or execution wiring |
+| Durable handoff | Transactional outbox, fenced leases and deduplicated inbox delivery; no execution authority |
+| Patch review | Approval and rejection bound to the exact diff digest; operator identity and timestamp recorded |
+| Concurrency and audit | PostgreSQL uniqueness/row locks; decisions and audit events commit together |
+| Legacy reconciliation | Ambiguous execution labels quarantined as `requires_review`, with original status/evidence retained |
+| Offline preview | Diff summary without cloning or executing a repository |
+| Existing records | Authenticated workflow, patch, timeline, audit and aggregate reads |
+| Validation | Unit tests and real PostgreSQL tests covering concurrency, rollback and migration safeguards |
+
+Repository registration does not verify remote access or enable execution. Patch approval
+means the operator reviewed that content; it does not mean tests ran, a commit was created
+or a PR was published. Historical planner/artifact helpers remain limited to heuristic
+inventory and unvalidated Markdown proposals at fixed documentation paths, not general-purpose
+task implementation. Executable/configuration paths and arbitrary model-selected paths are rejected.
 
 ## Architecture
 
+The initial deployment is a Python modular monolith with PostgreSQL and existing ARQ/Redis
+worker adapters. LangGraph remains the orchestration framework; durable step recovery is
+planned work. No additional distributed infrastructure is introduced without a measured need.
+
 ```mermaid
 flowchart TD
-
-    Client[Client / CLI / API Consumer]
-
-    Client --> API[FastAPI API]
-
-    API --> Workflow[Workflow Service]
-
-    Workflow --> DB[(PostgreSQL)]
-
-    Workflow --> Queue[ARQ Queue]
-
-    Queue --> Worker[Worker]
-
-    Worker --> LangGraph[LangGraph Engine]
-
-    LangGraph --> Analysis[Repository Analysis]
-
-    LangGraph --> Planning[Implementation Planning]
-
-    LangGraph --> Patch[Code Modification]
-
-    Patch --> GitHub[GitHub Branch / PR]
-
-    Worker --> Audit[Audit Events]
-
+    Operator[Authenticated operator] --> API[FastAPI control plane]
+    API --> Registry[Repository registration]
+    API --> Review[Content-bound patch review]
+    Registry --> DB[(PostgreSQL)]
+    Review --> DB
+    Registry --> Audit[Transactional audit events]
+    Review --> Audit
     Audit --> DB
-
-    GitHub --> PR[Pull Request Records]
-
-    PR --> DB
+    API --> Guard[Execution containment]
+    Worker[Legacy worker jobs] --> Guard
+    Guard --> Denied[Live effects unavailable]
 ```
 
-The system consists of:
+The target design separates control, orchestration, execution and integration responsibilities.
+Untrusted repository code will execute outside the credential-bearing control plane. A
+temporary directory or allowlisted pytest command is not that security boundary.
 
-* FastAPI API layer
-* PostgreSQL persistence
-* Redis + ARQ background job queue
-* LangGraph workflow orchestration
-* Repository analysis engine
-* Implementation planning engine
-* Code modification engine
-* Pull request tracking
-* Audit logging
+## Quick start
 
-Architecture source:
-
-```text
-docs/diagrams/adwe-architecture.mmd
-```
-
-## Features
-
-### Current Capabilities
-
-* FastAPI backend
-* PostgreSQL persistence
-* Redis service
-* Docker Compose local stack
-* Alembic database migrations
-* LangGraph workflow orchestration
-* Repository architecture analysis
-* Implementation planning
-* Code modification proposal generation
-* Patch workflow scaffolding
-* Test execution service
-* Pull request record tracking
-* Audit event persistence
-* Prometheus metrics endpoint
-* Request ID middleware
-* GitHub Actions CI
-* Workflow execution timestamps
-* Retry tracking
-* Queue metrics
-* Worker heartbeat monitoring
-
-
-### Agentic Workflow Capabilities
-
-ADWE now supports:
-
-- Repository analysis with framework/tooling detection
-- Structured implementation planning
-- Planner trace metadata
-- Dynamic patch target selection
-- Patch preview summaries
-- Patch metadata persistence
-- Human approval workflow
-- Test-gated patch application
-- Git branch creation
-- GitHub pull request creation
-- Pull request persistence
-- Workflow-to-PR linkage
-- Structured audit events
-
-
-
-### Planned Capabilities
-
-* Real GitHub branch creation
-* Patch application against repositories
-* Git push automation
-* Pull request creation
-* OpenTelemetry tracing
-* LLM-powered planning
-* Role-based access control
-* Kubernetes deployment
-* Multi-agent execution
-
-## Local Development
-
-### Start Infrastructure
+Start from the development branch to use the implementation described here:
 
 ```bash
-docker compose up --build
+git clone --branch hardening/production-foundation https://github.com/jennasilvera/agentic-development-workflow-engine.git
+cd agentic-development-workflow-engine
 ```
 
-### Health Check
+Requirements: Python 3.12+, uv, Git, and PostgreSQL 16 for integration tests. Docker Compose
+can supply development PostgreSQL and Redis. Run from the repository root.
 
 ```bash
-curl http://localhost:8000/v1/health
+uv sync --frozen
+docker compose up -d postgres redis
+export DATABASE_URL=postgresql+asyncpg://adwe:adwe@127.0.0.1:5433/adwe
+export ADWE_TEST_DATABASE_URL="$DATABASE_URL"
+PYTHONPATH=src uv run --frozen alembic upgrade head
 ```
 
-### Open API Documentation
+Compose publishes PostgreSQL on port **5433**. Alembic and the application share DATABASE_URL;
+Alembic selects its synchronous driver internally. Sample database credentials are for local
+development only. Registry integration tests require permission to create temporary schemas.
 
-```text
-http://localhost:8000/docs
-```
-
-### Metrics
+Generate a high-entropy operator credential for your development session:
 
 ```bash
-curl http://localhost:8000/metrics
+export ADWE_OPERATOR_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export API_TOKEN_SHA256="$(python -c 'import hashlib, os; print(hashlib.sha256(os.environ["ADWE_OPERATOR_TOKEN"].encode()).hexdigest())')"
+export API_OPERATOR_ID=operator
+PYTHONPATH=src uv run --frozen uvicorn adwe.api.app:app --host 127.0.0.1
 ```
 
-## Workflow Demo
+The server needs only API_TOKEN_SHA256 and the stable operator ID. ADWE_OPERATOR_TOKEN is a
+client-side example variable. Store operational credentials in a secret manager and send
+bearer tokens only over TLS or loopback. Rotate the digest on every API instance and restart
+them; preserve the operator ID for attribution. Never commit raw tokens.
 
-### Create Workflow
+This is a single-operator deployment: that identity can access all deployment records.
+Multitenancy, end-user RBAC, token expiry and rate limits are not implemented. Use a trusted
+development environment. Worker jobs remain blocked; starting a worker does not enable them.
+
+## API
+
+Interactive schema: `/docs`. OpenAPI: `/openapi.json`. These expose metadata without credentials;
+all application operations, including `/metrics` and `/v1/health`, require bearer authentication.
+
+| Operation | Endpoint | Behavior |
+| --- | --- | --- |
+| Register repository | `POST /v1/repositories` | 201 for new identity; 200 for an existing identity |
+| List repositories | `GET /v1/repositories?limit=50&offset=0` | Bounded page with `next_offset` |
+| Enable/disable | `PATCH /v1/repositories/{id}` | Accepts `enabled`; does not start a run |
+| Pin provider identity | `POST /v1/repositories/{id}/identity` | Immutable operator-selected numeric GitHub repository ID |
+| Submit task input | `POST /v1/submissions` | Requires `Idempotency-Key`; records input without admitting execution |
+| Submission evidence | `GET /v1/submissions/{id}/status` | Delivery, receipt and observation status; execution remains false |
+| Observe revision | `POST /v1/submissions/{id}/observe` | Bounded public metadata lookup after inbox delivery |
+| Read patch | `GET /v1/workflows/{workflow_id}/patches/{patch_id}` | Includes current `diff_sha256` and approval evidence |
+| Approve/reject | `POST .../patches/{patch_id}/approve` or `/reject` | Requires `expected_diff_sha256`; stale/illegal decisions return 409 |
+| Preview | `POST /v1/patch-workflows/preview` | Read-only summary, not validation or authorization |
+| Execute/publish | Existing workflow/apply/PR endpoints | 503 `operation_unavailable`, even with a valid operator token |
+
+Register a repository:
 
 ```bash
-curl -X POST http://localhost:8000/v1/workflows \
-  -H "Content-Type: application/json" \
-  -d '{"repository_url":"https://github.com/pallets/flask"}'
+curl -X POST http://127.0.0.1:8000/v1/repositories \
+  -H "Authorization: Bearer $ADWE_OPERATOR_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"repository_url":"https://github.com/example/project"}'
 ```
 
-### List Workflows
+URL case and an optional `.git` suffix/trailing slash normalize to the same identity.
+Re-registering a disabled repository never re-enables it. No network request is made.
+
+To review a persisted proposal, GET the patch, review the entire diff, and submit its
+`diff_sha256` as `expected_diff_sha256` to the decision endpoint. Repeat decisions are
+idempotent. Rejecting an approved patch revokes approval. Rejected, terminal or quarantined
+patches cannot silently return to approved. There is no automatic reconciliation shortcut.
+
+## Verification
 
 ```bash
-curl http://localhost:8000/v1/workflows
+# No PostgreSQL or Redis required
+PYTHONPATH=src uv run --frozen pytest tests/unit -q
+
+# Real PostgreSQL, including migration and concurrency behavior
+PYTHONPATH=src uv run --frozen pytest tests/integration -q
 ```
 
-### Get Workflow
+Integration tests fail if PostgreSQL is unavailable; they do not silently skip or substitute
+SQLite. Registry/lifecycle fixtures create and drop isolated random schemas. Use a disposable
+test database. The preserved workflow timeline test uses DATABASE_URL and migrated tables.
+CI installs frozen dependencies, applies migrations, runs both suites, restores a disposable
+backup and tests recovery, validates Compose, and smoke-tests the restricted non-root image.
 
-```bash
-curl http://localhost:8000/v1/workflows/<workflow_id>
-```
+Targeted static checks accompany each increment. Whole-project static cleanup, full execution
+recovery and adversarial executor qualification remain roadmap work.
 
-### Workflow Summary
+## Engineering documentation
 
-```bash
-curl http://localhost:8000/v1/workflows/<workflow_id>/summary
-```
+- [Architecture](ARCHITECTURE.md): current implementation, target design and trust boundaries.
+- [Current-state assessment](CURRENT_STATE_ASSESSMENT.md): evidence from the original code baseline.
+- [Production-readiness gaps](PRODUCTION_READINESS_GAP_ANALYSIS.md): prioritized remaining work.
+- [Implementation roadmap](IMPLEMENTATION_ROADMAP.md): phased acceptance criteria and recovery risks.
+- [Security](SECURITY.md): supported operating scope and containment contract.
+- [Operator admission ADR](docs/adr/001-single-operator-admission.md).
+- [Patch review and migration](docs/patch-review.md).
 
-### Workflow Artifacts
+## Supported intake and remaining work
 
-```bash
-curl http://localhost:8000/v1/workflows/<workflow_id>/artifacts
-```
+The [metadata intake guide](docs/metadata-intake.md) connects repository registration and
+provider-ID pinning, immutable task submission, explicit inbox delivery, and persisted public
+GitHub revision observations under `public-metadata-v1`. A submission and a successful
+observation remain distinct from execution admission. The status API always reports
+`execution_admitted: false`.
 
-### Workflow Pull Request
+- [Run-input contract](docs/run-input.md): canonical identity and digest.
+- [Verification outbox](docs/submission-outbox.md): fenced delivery and durable receipt.
+- [Revision observations](docs/revision-observation.md): bounded provider lookup and its limits.
+- [Deployment](docs/deployment.md): migration-first startup, container checks and release blockers.
+- [Recovery drill](docs/recovery.md): backup restoration, evidence checks and delivery replay.
+- [Model gateway](docs/model-gateway.md): internal proposal contract, durable reservations and integration limits.
+- [OpenAI adapter](docs/openai-provider.md): transport bounds, credentials and qualification limits.
 
-```bash
-curl http://localhost:8000/v1/workflows/<workflow_id>/pull-request
-```
-
-### Workflow Metrics
-
-```bash
-curl http://localhost:8000/v1/workflow-metrics
-```
-
-### Workflow Metrics Dashboard
-
-```bash
-curl http://localhost:8000/v1/workflow-metrics
-
-### Queue Metrics
-
-```bash
-curl http://localhost:8000/v1/queue-metrics
-```
-
-### Successful PR Demo
-
-ADWE successfully executed the full workflow:
-
-```text
-workflow created
-patch generated
-patch approved
-patch applied
-branch pushed
-pull request opened
-pull request persisted
-workflow linked to pull request
-
-```
-
-Example pull request: 
-
-Latest successful PR: https://github.com/jennasilvera/adwe/pull/3
-
-## GitHub Authentication
-
-For private repositories create a GitHub Personal Access Token.
-
-Create a local `.env` file:
-
-```env
-GITHUB_TOKEN=your_token_here
-```
-
-## Database Migrations
-
-Generate migration:
-
-```bash
-PYTHONPATH=src uv run alembic revision --autogenerate -m "description"
-```
-
-Apply migration:
-
-```bash
-PYTHONPATH=src uv run alembic upgrade head
-```
-
-## Testing
-
-Run all tests:
-
-```bash
-PYTHONPATH=src uv run pytest
-```
-
-## Pre-Push Checklist
-
-```bash
-PYTHONPATH=src uv run pytest
-PYTHONPATH=src uv run alembic upgrade head
-docker compose config
-```
-
-## Technology Stack
-
-* Python 3.12
-* FastAPI
-* PostgreSQL
-* SQLAlchemy
-* Alembic
-* Redis
-* ARQ
-* LangGraph
-* Docker
-* GitHub Actions
-* Prometheus
-
-### Patch Prioritization
-
-ADWE ranks generated patch proposals before review.
-
-Each proposed patch includes:
-
-- `priority_score`
-- `priority_reason`
-- `summary`
-- `files_changed`
-- `reasoning`
-
-This allows reviewers to approve high-impact changes first, such as CI workflows, migration validation, Docker health checks, or API surface documentation.
-
-
-## Roadmap
-
-### Phase 1 (Completed)
-
-* Workflow orchestration
-* Repository analysis
-* Implementation planning
-* Audit logging
-* Metrics
-* Queue processing
-
-### Phase 2 (In Progress)
-
-* Branch management
-* Patch workflow
-* Pull request records
-* Workflow artifact APIs
-
-
-### Phase 3 (Planned)
-
-* Real repository cloning
-* Patch application
-* Commit generation
-* GitHub pull request creation
-* End-to-end autonomous development workflow
-
-```
-```
-
+Remaining product work includes admitted-run lifecycle, isolated repository acquisition and
+execution, live-provider qualification, monetary/global budgets and model evaluations, validated changesets, and
+reconciled publication. Production release also requires deployment-specific recovery,
+monitoring, capacity and security qualification. These are open requirements, not capabilities
+provided by the current control plane.

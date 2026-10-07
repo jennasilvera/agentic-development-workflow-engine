@@ -1,34 +1,40 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 
-from adwe.api.workflow_timeline import router as workflow_timeline_router
-from adwe.api.workflow_analytics import router as workflow_analytics_router
 from adwe.api.audit import router as audit_router
+from adwe.api.auth import require_operator
 from adwe.api.middleware import RequestIDMiddleware
 from adwe.api.patch_apply import router as patch_apply_router
 from adwe.api.patch_preview import router as patch_preview_router
 from adwe.api.patches import router as patches_router
-from adwe.api.pull_requests import router as pull_requests_router
 from adwe.api.pull_request_records import router as pull_request_records_router
+from adwe.api.pull_requests import router as pull_requests_router
 from adwe.api.queue import router as queue_router
 from adwe.api.queue_metrics import router as queue_metrics_router
-from adwe.api.workflows import router as workflows_router
+from adwe.api.repositories import router as repositories_router
+from adwe.api.submissions import router as submissions_router
 from adwe.api.worker_health import router as worker_health_router
+from adwe.api.workflow_analytics import router as workflow_analytics_router
 from adwe.api.workflow_leaderboard import router as workflow_leaderboard_router
 from adwe.api.workflow_metrics import router as workflow_metrics_router
+from adwe.api.workflow_timeline import router as workflow_timeline_router
+from adwe.api.workflows import router as workflows_router
 from adwe.core.logging import configure_logging
 from adwe.db.session import engine
 
 configure_logging()
 
 app = FastAPI(
+    dependencies=[Depends(require_operator)],
     title="Agentic Development Workflow Engine",
-    description="A platform for repository analysis, agentic planning, patch generation, test execution, audit logging, and pull request automation.",
+    description="Authenticated repository registration, metadata intake, revision observations and auditable patch review. Execution and publication remain contained.",
     version="0.1.0",
 )
 
 app.add_middleware(RequestIDMiddleware)
+app.include_router(repositories_router)
+app.include_router(submissions_router)
 app.include_router(workflow_timeline_router)
 app.include_router(workflows_router)
 app.include_router(worker_health_router)

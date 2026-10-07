@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from adwe.api.execution_policy import require_live_operations
 from adwe.db.session import AsyncSessionLocal
 from adwe.models.pull_request_schema import PullRequestCreate, PullRequestRead
 from adwe.models.workflow import Workflow
@@ -9,7 +10,11 @@ from adwe.services.pull_request_records import record_pull_request
 router = APIRouter(prefix="/v1/pull-requests", tags=["pull-requests"])
 
 
-@router.post("", response_model=PullRequestRead)
+@router.post(
+    "",
+    response_model=PullRequestRead,
+    dependencies=[Depends(require_live_operations)],
+)
 async def open_pull_request(payload: PullRequestCreate):
     result = create_pull_request(
         repository_url=payload.repository_url,

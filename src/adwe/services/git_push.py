@@ -2,6 +2,7 @@ import subprocess
 from pathlib import Path
 
 from adwe.core.config import settings
+from adwe.services.execution_policy import Operation, require_operation
 
 
 class GitPushError(Exception):
@@ -9,6 +10,7 @@ class GitPushError(Exception):
 
 
 def push_branch(repo_path: Path, branch_name: str) -> None:
+    require_operation(Operation.PUBLICATION)
     if not settings.github_token:
         raise GitPushError("GITHUB_TOKEN is required to push branches")
 

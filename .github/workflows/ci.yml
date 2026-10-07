@@ -33,10 +33,65 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --frozen
 
-      - name: Run tests
-        run: PYTHONPATH=src uv run pytest
+      - name: Apply database migrations
+        run: PYTHONPATH=src uv run --frozen alembic upgrade head
+
+      - name: Unit tests
+        run: PYTHONPATH=src uv run --frozen pytest tests/unit
+
+      - name: PostgreSQL integration tests
+        run: PYTHONPATH=src uv run --frozen pytest tests/integration
+
+      - name: Backup, restore and recovery drill
+        env:
+          ADWE_DRILL_CONTAINER: ${{ job.services.postgres.id }}
+        run: PYTHONPATH=src uv run --frozen python scripts/recovery_drill.py
 
       - name: Validate Docker Compose
         run: docker compose config
+
+  container-smoke:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build control-plane image
+        run: docker build -t adwe-ci .
+      - name: Verify non-root image and packaged migrations
+        run: |
+          test "$(docker run --rm --entrypoint id adwe-ci -u)" = "10001"
+          docker run --rm adwe-ci alembic heads
+      - name: Start restricted control-plane container
+        run: |
+          docker run -d --name adwe-smoke --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1:8000:8000 -e API_TOKEN_SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa adwe-ci
+      - name: Check startup and authentication
+        run: |
+          python - <<'PY'
+          import http.client
+          import time
+          import urllib.error
+          import urllib.request
+          for attempt in range(30):
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=2) as response:
+                      assert response.status == 200
+                  break
+              except (urllib.error.URLError, OSError, http.client.RemoteDisconnected):
+                  time.sleep(1)
+          else:
+              raise SystemExit('API did not start')
+          try:
+              urllib.request.urlopen('http://127.0.0.1:8000/v1/submissions', timeout=2)
+          except urllib.error.HTTPError as error:
+              assert error.code == 401, error.code
+          else:
+              raise AssertionError('Unauthenticated request unexpectedly succeeded')
+          PY
+      - name: Container logs
+        if: failure()
+        run: docker logs adwe-smoke
+      - name: Cleanup smoke container
+        if: always()
+        run: docker rm -f adwe-smoke || true

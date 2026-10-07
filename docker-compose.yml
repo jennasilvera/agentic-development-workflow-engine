@@ -1,47 +1,65 @@
 services:
-
   api:
     build: .
-    container_name: adwe-api
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://adwe:adwe@postgres:5432/adwe
       REDIS_URL: redis://redis:6379/0
-      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      API_OPERATOR_ID: ${API_OPERATOR_ID:-operator}
+      API_TOKEN_SHA256:
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     depends_on:
-      - postgres
-      - redis
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build: .
+    command: alembic upgrade head
+    environment:
+      DATABASE_URL: postgresql+asyncpg://adwe:adwe@postgres:5432/adwe
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   postgres:
     image: postgres:16
-    container_name: adwe-postgres
     environment:
       POSTGRES_USER: adwe
       POSTGRES_PASSWORD: adwe
       POSTGRES_DB: adwe
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U adwe -d adwe"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   redis:
     image: redis:7
-    container_name: adwe-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
+  # Legacy execution is contained. Start only for explicit queue diagnostics.
   worker:
     build: .
-    container_name: adwe-worker
-    command: uv run arq adwe.workers.arq_worker.WorkerSettings
+    profiles: [legacy-contained]
+    command: arq adwe.workers.arq_worker.WorkerSettings
     environment:
       DATABASE_URL: postgresql+asyncpg://adwe:adwe@postgres:5432/adwe
       REDIS_URL: redis://redis:6379/0
-      GITHUB_TOKEN: ${GITHUB_TOKEN}
     depends_on:
-      - postgres
-      - redis
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
 
 volumes:
   postgres_data:

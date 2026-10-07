@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
+
+from adwe.domain.patch_decision import diff_digest
 
 
 class PatchRead(BaseModel):
@@ -24,3 +26,13 @@ class PatchRead(BaseModel):
     reasoning: str | None = None
     priority_score: int | None = None
     priority_reason: str | None = None
+
+    approved_by: str | None = None
+    approved_at: datetime | None = None
+    approved_diff_sha256: str | None = None
+    legacy_status: str | None = None
+
+    @computed_field
+    @property
+    def diff_sha256(self) -> str:
+        return diff_digest(self.diff)

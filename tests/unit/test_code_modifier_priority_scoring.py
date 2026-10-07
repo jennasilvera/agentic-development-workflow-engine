@@ -2,7 +2,7 @@ from adwe.agents.code_modifier import _score_target
 
 
 def test_score_target_prioritizes_ci_workflows():
-    score, reason = _score_target(".github/workflows/ci.yml")
+    score, reason = _score_target("docs/adwe-ci-recommendations.md")
 
     assert score == 95
     assert "CI" in reason

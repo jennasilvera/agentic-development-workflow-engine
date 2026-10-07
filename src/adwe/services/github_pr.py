@@ -3,6 +3,7 @@ import re
 import httpx
 
 from adwe.core.config import settings
+from adwe.services.execution_policy import Operation, require_operation
 
 
 class GitHubPRError(Exception):
@@ -24,6 +25,7 @@ def create_pull_request(
     title: str,
     body: str,
 ) -> dict:
+    require_operation(Operation.PUBLICATION)
     if not settings.github_token:
         return {
             "repository_url": repository_url,
