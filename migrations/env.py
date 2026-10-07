@@ -11,6 +11,7 @@ from adwe.models.patch import Patch  # noqa: F401
 from adwe.models.pull_request import PullRequest  # noqa: F401
 from adwe.models.repository import Repository  # noqa: F401
 from adwe.models.run_submission import RunSubmission  # noqa: F401
+from adwe.models.submission_outbox import SubmissionOutbox  # noqa: F401
 from adwe.models.workflow import Workflow  # noqa: F401
 
 config = context.config

@@ -158,3 +158,12 @@ retries and reject changed input. Digest constraints, foreign keys, immutable-ro
 populated-downgrade protection preserve evidence. Audit writes share the caller's transaction.
 These are recorded requests, not admitted executions. Next: verified revision/policy admission,
 run lifecycle and transactional outbox; expose a run API only with those boundaries in place.
+
+## Increment 2a: verification outbox foundation
+
+Submission insertion now atomically creates one verification intent through a database trigger.
+Internal services claim with skip-locked row locks, database-time leases, fresh fencing tokens,
+five-attempt limits, retry delay and transactional transition audit. Existing submissions receive
+pending verification intents on migration. Populated downgrade is protected. This is not an
+execution scheduler: dispatcher, idempotent verification consumer, verified admission, run
+lifecycle and downstream effect fencing remain next. See docs/submission-outbox.md.
