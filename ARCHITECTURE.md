@@ -15,16 +15,17 @@ There is no isolated execution plane or durable graph checkpoint store.
 
 The first containment increment denies repository acquisition, host test execution, mutation
 requests and publication. Offline planning on supplied inventory, diff preview, schema docs
-and existing read endpoints remain available. This is a development containment mode, not
-production authorization. See SECURITY.md for the exact contract and residual risks.
+and authenticated read endpoints remain available. This is a development containment mode, not
+a production execution boundary. Single-operator API authentication and a PostgreSQL repository
+registry are now implemented; runs do not yet bind these registrations. See SECURITY.md for the exact contract and residual risks.
 
 ```mermaid
 flowchart TD
-    Client[Client] --> API[FastAPI]
-    API --> Read[Read and preview operations]
+    Client[Operator bearer] --> API[Authenticated FastAPI]
+    API --> Read[Reads, preview and repository registry]
     API --> Gate[Containment policy]
     Gate --> Deny[503 operation unavailable]
-    Read --> DB[(Existing PostgreSQL tables)]
+    Read --> DB[(PostgreSQL)]
     Worker[Legacy ARQ jobs] --> Gate
     Service[Acquisition and publication services] --> Gate
 ```
@@ -135,3 +136,16 @@ Collect queue latency, step duration, resource consumption, provider limits and 
 before scaling. Redacted structured logs, bounded-cardinality metrics and propagated traces
 support operations; append-oriented audit data supports investigation. These are distinct stores
 with explicit retention and access controls. Neither is fully implemented today.
+
+## Implemented increment: operator and repository admission
+
+See ADR 001. Global FastAPI authentication covers data APIs, preview, health and metrics;
+public docs contain schemas only. The operator identity is deployment-wide and grants access
+to legacy data. `repositories` stores unique canonical GitHub URLs, registration actor,
+enabled status and timezone-aware creation time. Registry mutations append actor-attributed
+legacy audit rows in the same transaction. Unique inserts and row locks make concurrent
+registration/state changes deterministic. No workflow-to-registry FK or revision model exists
+yet. Repository permission enforcement at execution must precede lifting containment.
+
+Application and migrations share DATABASE_URL; Alembic changes only the driver to psycopg.
+Tests exercise PostgreSQL in isolated schemas; unit tests have no live DB dependency.

@@ -38,8 +38,11 @@ jobs:
       - name: Apply database migrations
         run: PYTHONPATH=src uv run --frozen alembic upgrade head
 
-      - name: Run tests
-        run: PYTHONPATH=src uv run --frozen pytest
+      - name: Unit tests
+        run: PYTHONPATH=src uv run --frozen pytest tests/unit
+
+      - name: PostgreSQL integration tests
+        run: PYTHONPATH=src uv run --frozen pytest tests/integration
 
       - name: Validate Docker Compose
         run: docker compose config

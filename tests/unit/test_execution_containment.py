@@ -49,7 +49,7 @@ PATCH = {
     ],
 )
 def test_api_denies_before_database_queue_or_external_effects(
-    monkeypatch, path, payload
+    monkeypatch, path, payload, operator_headers
 ):
     forbidden = Mock(side_effect=AssertionError("Side effect reached before denial"))
     for module in (workflows, patches, pull_requests):
@@ -60,7 +60,7 @@ def test_api_denies_before_database_queue_or_external_effects(
     monkeypatch.setattr(patch_apply, "apply_patch_workflow", forbidden)
 
     with TestClient(app) as client:
-        response = client.post(path, json=payload)
+        response = client.post(path, json=payload, headers=operator_headers)
     assert response.status_code == 503
     assert response.json()["detail"]["code"] == "operation_unavailable"
     assert response.json()["detail"]["policy_version"] == "containment-v1"
@@ -68,12 +68,14 @@ def test_api_denies_before_database_queue_or_external_effects(
     forbidden.assert_not_called()
 
 
-def test_preview_remains_available_without_execution(monkeypatch):
+def test_preview_remains_available_without_execution(monkeypatch, operator_headers):
     forbidden = Mock(side_effect=AssertionError("Preview must not execute"))
     monkeypatch.setattr(patch_apply, "apply_patch_workflow", forbidden)
     payload = {**PATCH, "diff": "diff --git a/readme.md b/readme.md\n+example\n"}
     with TestClient(app) as client:
-        response = client.post("/v1/patch-workflows/preview", json=payload)
+        response = client.post(
+            "/v1/patch-workflows/preview", json=payload, headers=operator_headers
+        )
     assert response.status_code == 200
     assert response.json()["files_changed"] == ["readme.md"]
     forbidden.assert_not_called()

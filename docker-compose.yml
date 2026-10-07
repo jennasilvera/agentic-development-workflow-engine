@@ -8,6 +8,8 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://adwe:adwe@postgres:5432/adwe
       REDIS_URL: redis://redis:6379/0
+      API_OPERATOR_ID: ${API_OPERATOR_ID:-operator}
+      API_TOKEN_SHA256: # Pass through from the host; missing config fails closed
       GITHUB_TOKEN: ${GITHUB_TOKEN}
     depends_on:
       - postgres

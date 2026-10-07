@@ -8,10 +8,11 @@ ADWE is not approved for production use or untrusted repository execution.
 patch execution, host tests and publication. There is no environment opt-in. These are
 release containment decisions, not a finished per-actor authorization/policy engine.
 
-- All existing mutating API routes return HTTP **503**, with `detail.code` equal to
+- Authenticated legacy live-workflow mutation routes return HTTP **503**, with `detail.code` equal to
   `operation_unavailable` and `detail.policy_version` equal to `containment-v1`.
   Rejection happens before route database/queue/external effects. Request parsing may still
   return validation errors for malformed transport input.
+- All application operations now require the configured operator bearer token (see below).
 - Preview is POST but read-only; `/v1/patch-workflows/preview` remains available. OpenAPI and
   existing GET endpoints remain available. They do not acquire repositories or run code.
 - Workflow and patch workers reject even old queued jobs before heartbeat, database access
@@ -32,8 +33,9 @@ for trusted local fixture development; they are not supported untrusted executio
 
 ## Residual risks
 
-Read APIs remain unauthenticated and may expose historical source/prompt/audit data. Do not
-expose the service publicly or attach sensitive production data. Preview/input sizes are not
+The single configured operator can access all historical source/prompt/audit data. There is
+no multitenant or end-user role isolation. Do not expose the service publicly or attach sensitive
+production data until the remaining hardening work is complete. Preview/input sizes are not
 yet bounded. Existing database credentials/configuration, lifecycle defects, deployment
 hardening and durability gaps remain as recorded in PRODUCTION_READINESS_GAP_ANALYSIS.md.
 Containment cannot stop old processes or prevent a trusted host operator from importing
@@ -45,7 +47,7 @@ low-level helpers, editing code, monkeypatching the guard or invoking Git indepe
 | GitHub credentials/source | Credential-bearing clone, symlink reads, unauthorized target | Acquisition denied; credential injection removed | Scoped broker, registration, revision pinning, safe bounded inventory |
 | Remote branches/PRs | Direct API or worker bypasses approval/tests | Publication and patch workflow denied | Digest-bound approval, durable effect intent, reconciliation |
 | Workflow/audit integrity | Duplicate queue delivery or false APPLIED status | Mutating endpoints/jobs denied | Authenticated atomic lifecycle and auditable legacy-data repair |
-| Historical private data | Unauthenticated GET requests | No new access-control guarantee | Identity/authorization on reads, redaction and retention |
+| Historical private data | Unauthenticated GET requests | Operator bearer required on reads and metrics | End-user identity/RBAC if needed, rate limits, redaction and retention |
 
 ## Deployment and recovery procedure
 
@@ -59,5 +61,26 @@ low-level helpers, editing code, monkeypatching the guard or invoking Git indepe
    a denial. Never add an `unsafe=true` escape hatch. If rollout fails, stop the service rather
    than restoring the unsafe network-exposed path.
 
-No database migration is needed for containment. No queued-run status is fabricated as
+No database migration was needed for initial containment. Repository registration adds migration `7b91e2c40a16`. No queued-run status is fabricated as
 canceled/failed: a future reconciliation procedure must determine actual prior effects.
+
+## Operator authentication and repository administration
+
+All application endpoints now require bearer authentication, including preview, health and
+metrics. Docs/OpenAPI remain public schema metadata. Missing `API_TOKEN_SHA256` yields 503;
+invalid/missing tokens yield 401. Invalid configured digests fail settings validation.
+`API_OPERATOR_ID` supplies stable audit attribution. Use a randomly generated token with at
+least 32 random bytes, store only its SHA-256 hex digest in server configuration, and transmit
+the token over TLS or loopback. Never use a human password as this token. Restart every API
+instance on digest rotation; keep the actor ID stable. These credentials are not GitHub tokens.
+
+The operator may register, list and enable/disable repositories. Registration is not proof of
+GitHub access and does not lift execution containment. Duplicate canonical registrations return
+the existing row without re-enabling it. Registry updates and actor-attributed audit evidence
+share one PostgreSQL transaction. The initial registry contains no inferred approvals from
+legacy workflow URLs. Its downgrade refuses to drop populated registrations; export and
+reconcile before an explicit data-removal/downgrade procedure.
+
+This single-operator deployment grants that identity all existing data access. It does not
+implement multitenancy, per-user roles, token expiry, SSO, API rate limits or immutable audit
+storage. See [ADR 001](docs/adr/001-single-operator-admission.md).

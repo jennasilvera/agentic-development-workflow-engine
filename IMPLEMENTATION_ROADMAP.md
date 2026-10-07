@@ -3,7 +3,7 @@
 Work in reviewable increments. Each phase may span multiple changes; no phase is complete
 until its acceptance evidence exists. Preserve legacy data and public contracts explicitly.
 
-## 0. Contain unsafe execution (this increment)
+## 0. Contain unsafe execution (implemented)
 
 - Objective/rationale: stop externally reachable untrusted acquisition, host commands and
   publication while their trust boundaries are absent.
@@ -116,3 +116,18 @@ until its acceptance evidence exists. Preserve legacy data and public contracts 
 Next after phase 0: implement phase 1's authenticated read/write admission and repository
 registration in a separately tested increment, then lifecycle migration. Do not re-enable
 host commands as a shortcut while the isolated executor is under development.
+
+## Increment 1a: implemented operator and registry foundation
+
+- All application reads/writes/metrics require the configured operator bearer token; metadata
+  docs remain public. Missing config/invalid tokens fail closed, and credentials are not logged.
+- Add canonical repository registration and enable/disable endpoints, database constraints,
+  transactionally recorded actor attribution, duplicate-safe registration and row-locked updates.
+- Add Alembic migration with populated-downgrade protection; share DATABASE_URL across app/migrations.
+- Split real PostgreSQL integration tests from unit tests; test concurrent registrations,
+  concurrent disables, rollback, canonical database constraints and migration roundtrips.
+- Scope remains single-operator, no per-user RBAC or GitHub identity verification. Registrations
+  do not enable live execution or automatically approve historical workflow repositories.
+
+Next increment: truthful patch approval/application lifecycle, explicit legacy-state migration,
+then immutable repository/revision/task bindings and atomic run admission.
