@@ -162,3 +162,6 @@ idempotency and atomic audit. Submissions remain unverified and cannot dispatch 
 
 The [verification outbox](docs/submission-outbox.md) records submission intents atomically and
 provides bounded, fenced delivery leases. An explicit one-pass dispatcher delivers to a durable inbox; revision verification and execution remain blocked.
+
+A [bounded public GitHub revision adapter](docs/revision-observation.md) can observe exact
+commit/tree metadata. It is not yet connected to intake, and does not authorize execution.

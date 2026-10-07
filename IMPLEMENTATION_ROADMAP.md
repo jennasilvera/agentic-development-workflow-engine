@@ -177,3 +177,12 @@ that ID. No automatic poller or legacy execution worker is enabled. Crash-after-
 acknowledgement failure, concurrent receipt creation, audit rollback and cancellation are
 covered by PostgreSQL tests. Next: independent revision/policy verification and admitted run
 lifecycle; receipt creation must never be treated as verification success.
+
+## Increment 1e: public revision metadata adapter
+
+Added bounded, unauthenticated fixed-origin GitHub metadata observation for exact SHA-1
+commits. Checks repository identity/state before and after commit lookup, rejects redirects
+and ambiguous responses, caps body size and elapsed time, and reports classified failures.
+This is not admission or branch-membership proof. Observations are not yet persisted or wired
+into inbox processing. Next: pin provider identity in registration, trusted policy selection,
+persisted fresh evidence and atomic admission. See docs/revision-observation.md.
