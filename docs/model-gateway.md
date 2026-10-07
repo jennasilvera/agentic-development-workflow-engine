@@ -1,7 +1,8 @@
 # Internal model proposal contract
 
 `ModelGateway` accepts a trusted application-selected provider and immutable policy. It is
-not wired into an API, the legacy planner, a live provider, or an execution worker. No keys
+not wired into an API, the legacy planner or an execution worker. An opt-in
+[OpenAI adapter](openai-provider.md) implements its provider protocol but is not auto-enabled. No keys
 or external calls are needed for its deterministic tests. The existing legacy text client
 is not a production adapter for this gateway.
 
@@ -54,7 +55,8 @@ Provider failures expose only classified codes. Response bodies and task text ar
 by the gateway. Cancellation propagates; unexpected adapter programming exceptions propagate
 for investigation. Callers must not expose arbitrary exception tracebacks to users. A successful
 result includes attempt UUID, provider/model/policy version, input/response/proposal digests,
-strict usage and the immutable proposal. Persistence and failed-attempt audit are not yet wired.
+strict usage and the immutable proposal. The durable wrapper below persists outcomes and audit;
+the standalone gateway itself remains stateless beyond its in-memory reservations.
 
 ## Verification and next boundary
 
@@ -64,7 +66,7 @@ cancellation and repository text that requests policy changes. The addition fixt
 proposal shape and content only; it does not execute code or measure model task correctness.
 
 Before enabling a live path, implement a selected provider adapter with transport tests and
-explicit credential handling, durable budgets/attempt provenance, verified curated context,
+explicit credential handling, monetary/global budgets and billing reconciliation, verified curated context,
 independent changeset validation, an isolated executor and task-level model evaluations.
 The gateway does not remove any existing containment decision.
 

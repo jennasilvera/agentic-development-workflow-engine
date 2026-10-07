@@ -1,6 +1,6 @@
 # Agentic Development Workflow Engine
 
-[![CI](https://github.com/jennasilvera/agentic-development-workflow-engine/actions/workflows/ci.yml/badge.svg?branch=hardening%2Fproduction-foundation)](https://github.com/jennasilvera/agentic-development-workflow-engine/actions/workflows/ci.yml)
+[![CI](https://github.com/jennasilvera/agentic-development-workflow-engine/actions/workflows/ci.yml/badge.svg?branch=hardening%2Fproduction-foundation)](https://github.com/jennasilvera/agentic-development-workflow-engine/actions/workflows/ci.yml?query=branch%3Ahardening%2Fproduction-foundation)
 
 **ADWE is a platform for controlled AI-assisted software development.** Its purpose is to
 turn an engineering task into a reviewable repository change with explicit authorization,
@@ -8,8 +8,10 @@ reproducible validation and a traceable record of every consequential action.
 
 Models propose changes. The platform owns policy, execution and evidence.
 
-The current development branch implements an authenticated control plane, repository
-registration and content-bound patch review. Live repository acquisition, code execution
+The implementation is on `hardening/production-foundation` in [draft PR #4](https://github.com/jennasilvera/agentic-development-workflow-engine/pull/4).
+The default `master` branch has not been updated or merged. The CI badge above tracks the
+development branch. It implements authenticated metadata intake, repository registration,
+content-bound patch review, a typed model gateway and durable model-attempt accounting. Live repository acquisition, code execution
 and GitHub publication remain disabled while durable orchestration and execution isolation
 are rebuilt. This is an active implementation, not a production-ready release.
 
@@ -20,6 +22,7 @@ are rebuilt. This is an active implementation, not a production-ready release.
 | Operator authentication | Bearer authentication on application APIs, health and metrics; missing configuration fails closed |
 | Repository registry | Canonical GitHub identities, duplicate-safe registration, bounded listing, enable/disable controls |
 | Metadata intake | Immutable task/revision inputs, idempotent submissions, pinned GitHub repository IDs and persisted public revision observations |
+| OpenAI transport adapter | Opt-in fixed-origin Chat Completions adapter with bounded responses, explicit credentials and no retries; tested with synthetic transport, not enabled in APIs/workers |
 | Durable model accounting | Immutable per-submission policy, committed call/output-token reservations and attempt outcomes across workers and restarts; no monetary spending cap |
 | Model proposal contract | Internal provider-neutral gateway with strict input/content identity, bounded calls and validated text replacements; no live provider or execution wiring |
 | Durable handoff | Transactional outbox, fenced leases and deduplicated inbox delivery; no execution authority |
@@ -62,6 +65,13 @@ Untrusted repository code will execute outside the credential-bearing control pl
 temporary directory or allowlisted pytest command is not that security boundary.
 
 ## Quick start
+
+Start from the development branch to use the implementation described here:
+
+```bash
+git clone --branch hardening/production-foundation https://github.com/jennasilvera/agentic-development-workflow-engine.git
+cd agentic-development-workflow-engine
+```
 
 Requirements: Python 3.12+, uv, Git, and PostgreSQL 16 for integration tests. Docker Compose
 can supply development PostgreSQL and Redis. Run from the repository root.
@@ -174,10 +184,11 @@ observation remain distinct from execution admission. The status API always repo
 - [Revision observations](docs/revision-observation.md): bounded provider lookup and its limits.
 - [Deployment](docs/deployment.md): migration-first startup, container checks and release blockers.
 - [Recovery drill](docs/recovery.md): backup restoration, evidence checks and delivery replay.
-- [Model gateway](docs/model-gateway.md): internal proposal contract, reservations and integration limits.
+- [Model gateway](docs/model-gateway.md): internal proposal contract, durable reservations and integration limits.
+- [OpenAI adapter](docs/openai-provider.md): transport bounds, credentials and qualification limits.
 
 Remaining product work includes admitted-run lifecycle, isolated repository acquisition and
-execution, production model adapters with durable budgets and evaluations, validated changesets, and
+execution, live-provider qualification, monetary/global budgets and model evaluations, validated changesets, and
 reconciled publication. Production release also requires deployment-specific recovery,
 monitoring, capacity and security qualification. These are open requirements, not capabilities
 provided by the current control plane.

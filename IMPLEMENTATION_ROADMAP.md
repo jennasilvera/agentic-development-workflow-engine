@@ -238,3 +238,12 @@ again; uncertain/cancelled attempts remain spent. Row locks and database guards 
 across workers/restarts; populated downgrade refuses data loss. PostgreSQL tests cover races,
 restart, cancellation, audit rollback, immutable records and migration behavior. Monetary and
 global budgets, billing reconciliation, live adapters and execution admission remain open.
+
+## Increment 4c: opt-in OpenAI transport adapter
+
+Added a fixed-origin Chat Completions adapter with explicit SecretStr credentials, exact model
+identity, bounded HTTP envelope/decoded proposal, per-operation and total deadlines, strict
+usage and response parsing, no redirects/proxies/tools/retries/fallback, and sanitized failures.
+Synthetic transport tests cover requests, failure statuses, body limits, malformed responses
+and identity/usage mismatches. No live account call, API wiring or execution admission is
+claimed. README now explicitly identifies the development branch and unmerged PR.
