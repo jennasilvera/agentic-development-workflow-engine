@@ -28,7 +28,7 @@ configure_logging()
 app = FastAPI(
     dependencies=[Depends(require_operator)],
     title="Agentic Development Workflow Engine",
-    description="A platform for repository analysis, agentic planning, patch generation, test execution, audit logging, and pull request automation.",
+    description="Authenticated repository registration, metadata intake, revision observations and auditable patch review. Execution and publication remain contained.",
     version="0.1.0",
 )
 

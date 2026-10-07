@@ -169,3 +169,6 @@ commit/tree metadata. It is not yet connected to intake, and does not authorize 
 The [authenticated metadata intake flow](docs/metadata-intake.md) now connects repository-ID
 pinning, submissions, inbox delivery and persisted GitHub observations under `public-metadata-v1`.
 Read `/v1/submissions/{id}/status` for evidence. Execution admission remains false.
+
+See [deployment and release limits](docs/deployment.md) for migration-first Compose startup,
+non-root container operation, CI image checks and the remaining production blockers.

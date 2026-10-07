@@ -195,3 +195,11 @@ Observation persistence rechecks enabled registration after network I/O and enfo
 input/provider identities and freshness. Added real-PostgreSQL API, concurrency, disable-during-
 lookup, wrong-policy, unpinned, stale-evidence, rollback and database-guard tests.
 No execution is admitted. See docs/metadata-intake.md.
+
+## Operational foundation
+
+The control-plane image now uses a non-root runtime, locked production dependencies and
+packaged migrations. Compose waits for healthy PostgreSQL and successful migration, binds
+development ports to localhost, omits provider credentials and keeps legacy workers opt-in.
+CI now builds and smoke-tests the restricted image. This is control-plane hardening, not
+an untrusted-code executor or production release qualification. See docs/deployment.md.

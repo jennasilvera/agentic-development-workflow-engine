@@ -1,9 +1,11 @@
 import asyncio
+from uuid import uuid4
 
 import pytest
 from alembic import command
 from sqlalchemy import text
 
+from adwe.domain.run_input import RunInput
 from adwe.services.repositories import register_repository
 from adwe.services.run_submissions import record_run_submission
 from adwe.services.submission_outbox import (
@@ -150,12 +152,39 @@ async def test_claim_rollback_does_not_consume_attempt(registry_database):
 
 @pytest.mark.asyncio
 async def test_migration_backfills_existing_unverified_requests(registry_database):
-    engine, sessions, config = registry_database
+    engine, _, config = registry_database
     with engine.begin() as conn:
         config.attributes["connection"] = conn
         command.downgrade(config, "9d31e5f72a84")
-    row_id = await submit(sessions)
+    # Seed the historical schema without using current ORM columns/services.
+    row_id, repository_id = str(uuid4()), str(uuid4())
+    value = RunInput.model_validate(
+        {
+            "repository_id": repository_id,
+            "repository_url": "https://github.com/example/repo",
+            "base_commit_sha": "a" * 40,
+            "policy_version": "1",
+            "task": {"objective": "Fix", "acceptance_criteria": ["Pass"]},
+        }
+    )
     with engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO repositories (id,canonical_url,registered_by) VALUES (:id,:url,'operator')"
+            ),
+            {"id": repository_id, "url": value.repository_url},
+        )
+        conn.execute(
+            text(
+                "INSERT INTO run_submissions (id,repository_id,actor_id,request_key,canonical_input,input_digest) VALUES (:id,:repo,'operator','one',:input,:digest)"
+            ),
+            {
+                "id": row_id,
+                "repo": repository_id,
+                "input": value.canonical_bytes().decode("ascii"),
+                "digest": value.digest(),
+            },
+        )
         config.attributes["connection"] = conn
         command.upgrade(config, "head")
         assert conn.execute(
