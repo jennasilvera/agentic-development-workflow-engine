@@ -1,8 +1,8 @@
 # Submission verification outbox
 
 This increment records and leases delivery intents for **verification requests**, not execution
-jobs. No dispatcher, queue consumer, Git acquisition, policy authorization or execution is
-installed. The existing containment policy remains in force.
+jobs. An explicit one-pass dispatcher now hands off to a durable PostgreSQL inbox.
+Git acquisition, revision verification, policy authorization and execution remain unimplemented. The existing containment policy remains in force.
 
 ## Atomic creation
 
@@ -32,13 +32,13 @@ All service transitions and their audit events share a transaction.
 
 This is **at-least-once delivery preparation**. A crash after remote acceptance but before
 acknowledgement can cause redelivery. Lease tokens fence database acknowledgements only; they
-cannot retract a request already delivered to an external service. The future consumer must
-persist its own idempotent receipt before processing and independently check repository,
+cannot retract a request already delivered to an external service. The inbox consumer now
+persists its own idempotent receipt; future processing must and independently check repository,
 revision and policy authority. Never connect these intents directly to legacy run_workflow.
 
 ## Operations and recovery still required
 
-There is no background lease renewal, dispatcher, dead-letter replay API or consumer yet.
+There is no background polling, lease renewal, dead-letter replay API or revision verifier yet.
 Delivery adapters must use timeouts below the lease and classify known versus uncertain
 outcomes. Dead rows require reviewed recovery; do not mass-reset attempts. Polling fairness,
 metrics, retention, backoff tuning, dispatch fault injection and downstream fencing remain
@@ -50,3 +50,42 @@ records and use an explicitly reviewed recovery migration if removal becomes nec
 Real PostgreSQL tests cover atomic intent rollback, duplicate submissions, skip-locked claims,
 expiry and stale tokens, bounded attempts, retry delay, acknowledgement/claim rollback, and
 backfill from the prior schema. Database time is advanced in fixtures without sleeping.
+
+## Explicit dispatcher and durable inbox
+
+Run one handoff with:
+
+```bash
+PYTHONPATH=src uv run --frozen python -m adwe.workers.verification_dispatcher
+```
+
+This is an operator-side command with database access, not a public endpoint. It uses the
+configured DATABASE_URL. Apply migrations first. It claims and commits one outbox lease,
+then invokes `DatabaseInboxReceiver` with only the submission UUID in a separate transaction,
+then acknowledges in another transaction. No legacy ARQ execution function is called and no
+Redis service is needed for this handoff. This direct database receiver is the implemented
+transport; the receiver protocol allows a later adapter without claiming one exists today.
+
+The receiver loads the immutable submission, revalidates its schema, canonical encoding and
+digest, and inserts one immutable receipt plus audit. Duplicate receipt IDs return without
+repeating audit. The database requires the receipt digest to match its submission. A receipt
+means only that input is durably available for future verification. It does not re-enable a
+disabled repository, verify commit membership or authorize the requested policy. Those checks
+belong to the later admission service and must use current repository state.
+
+Receiver timeout is 20 seconds, below the 60-second delivery lease. Timeout, transport I/O and
+database failures return `uncertain` and retain the lease for eventual replay; programming or
+input-integrity errors propagate. Cancellation propagates too. Database failure during final
+acknowledgement propagates while preserving the committed receipt. Replaying after any of
+these outcomes is safe for receipt creation. `stale` means the handoff completed but the
+original lease can no longer acknowledge. `idle` may mean an exhausted row was retired.
+Invoke again periodically through an explicitly configured operator scheduler; no automatic
+poller is installed. Monitor non-delivered outcomes and dead rows. The receiver contract
+requires durable acceptance before returning and cooperative async cancellation. A future
+network adapter must enforce its own timeout and cannot claim receipt semantics merely from
+an enqueue response.
+
+Migration `b153a7c94da6` adds the inbox and immutable/digest-match guards. It does not backfill
+receipts or fabricate verification. Populated downgrade refuses receipt loss. Tests exercise
+concurrent intake, reply loss after commit followed by replay, acknowledgement failure,
+receipt audit rollback, cancellation, unknown IDs, database guards and protected downgrade.

@@ -161,4 +161,4 @@ An internal submission service now persists those inputs with repository checks,
 idempotency and atomic audit. Submissions remain unverified and cannot dispatch execution.
 
 The [verification outbox](docs/submission-outbox.md) records submission intents atomically and
-provides bounded, fenced delivery leases. No dispatcher or verification consumer is enabled yet.
+provides bounded, fenced delivery leases. An explicit one-pass dispatcher delivers to a durable inbox; revision verification and execution remain blocked.

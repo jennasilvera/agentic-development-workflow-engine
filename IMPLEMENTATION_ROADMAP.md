@@ -167,3 +167,13 @@ five-attempt limits, retry delay and transactional transition audit. Existing su
 pending verification intents on migration. Populated downgrade is protected. This is not an
 execution scheduler: dispatcher, idempotent verification consumer, verified admission, run
 lifecycle and downstream effect fencing remain next. See docs/submission-outbox.md.
+
+## Increment 2b: explicit dispatcher and idempotent inbox
+
+Added a one-pass operator command with committed claims, bounded handoff and fenced
+acknowledgement. The implemented receiver writes immutable PostgreSQL receipts and audit,
+revalidates source input and deduplicates delivery by submission ID. Transport carries only
+that ID. No automatic poller or legacy execution worker is enabled. Crash-after-acceptance,
+acknowledgement failure, concurrent receipt creation, audit rollback and cancellation are
+covered by PostgreSQL tests. Next: independent revision/policy verification and admitted run
+lifecycle; receipt creation must never be treated as verification success.
